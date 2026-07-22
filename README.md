@@ -121,6 +121,44 @@ This defines exactly what the next phase — an LLM-based Normalizer with
 structured output — needs to supply: the decision that two sources
 refer to the same object, nothing else.
 
+## Phase 5 scope (current) — LLM-based Normalizer v0.1
+
+[`normalizers/llm_document_normalizer.py`](src/ocom_reader/normalizers/llm_document_normalizer.py)
+adds `LLMDocumentNormalizer`, a second implementation of the same
+`Normalizer` interface. Nothing else changed: `OCOMObject`, `Evidence`,
+`Adapter`, and `Storage` are untouched (verified — no diff on any of
+those files in this phase's commit).
+
+- **Structured output boundary** — the injected `LLMClient` returns a
+  raw dict, validated against `ExtractionResult` (pydantic) before
+  anything is built from it. Malformed output raises `ValidationError`
+  instead of silently producing a bad `OCOMObject`
+  ([`test_malformed_llm_output_is_rejected`](tests/test_llm_document_normalizer.py)).
+- **Identity from concept, not path** — identity is a slug of the
+  LLM-extracted concept name (`concept:ocom-object`), so two documents
+  about the same concept get the *same* identity regardless of file
+  path or language. This is the one thing the deterministic Normalizer
+  structurally could not do.
+- **Evidence** — still one entry per document processed, `source`/
+  `reference`/`captured_at` exactly as before; `excerpt` now comes from
+  the LLM's own supporting quote instead of a fixed character slice.
+- **Confidence** — prepared as `metadata["confidence"] = "Low"` (per
+  the OCOM Confidence Model: AI inference only, unverified, is the
+  textbook Low case). No scoring logic — just the field, as asked.
+- **LLM call is injected**, not hardcoded (`LLMClient` protocol). Tests
+  use a deterministic fake client — no network, no API key, no cost,
+  consistent with the rest of this offline test suite.
+  `AnthropicLLMClient` is the real implementation, usable once
+  `ANTHROPIC_API_KEY` is set in the environment; it was not exercised
+  live in this phase.
+
+[`tests/test_llm_normalizer_same_object_recognition.py`](tests/test_llm_normalizer_same_object_recognition.py)
+is the required first test: `object_en.md` and `object_ru.md` both
+normalize to `identity == "concept:ocom-object"`; merging is a plain
+get-then-save around the unchanged `Storage` interface; the final
+stored object carries both Evidence entries, each with its own
+`reference` and `excerpt` intact.
+
 ## Running
 
 ```bash
