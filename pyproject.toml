@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ocom-reader"
+version = "0.1.0"
+description = "OCOM Reader — reference Adapter implementation for the OCOM architecture (Phase 1: architectural core)"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.scripts]
+ocom-reader = "ocom_reader.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ocom_reader"]
