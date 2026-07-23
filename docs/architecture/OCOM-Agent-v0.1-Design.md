@@ -5,6 +5,28 @@
 **Builds on:** [MILESTONE-001](MILESTONE-001.md) (OCOM Reader Architecture Freeze v0.1), [ADR-001](ADR-001-normalizer-architecture.md) (Normalizer architecture)
 **Core contracts this design does not touch:** `core/object.py`, `core/evidence.py`, `interfaces/adapter.py`, `interfaces/normalizer.py`, `interfaces/storage.py`. Any change to those requires its own ADR — none is proposed here.
 
+## Section Status (added by [Architecture Consistency Cleanup v0.1](Architecture-Status-v0.1.md))
+
+This document was written before any of it was implemented. Several
+validation-experiment tasks since then built real components that
+diverge from what's sketched below — not through any single ADR
+reversing this document, but through a series of scoped-down
+implementation choices none of which were reflected back here until
+now. Per section, not rewritten:
+
+| Section | Status | Why |
+|---|---|---|
+| §1 Purpose | **Still valid** | The Agent's job description (find, resolve, aggregate, answer, cite) matches what was actually built. |
+| §2 Architecture Overview | **Still valid**, except the package sketch | "Agent reads only from `Storage`, never `Adapter`" held. The file layout showing `agent/identity_resolver.py` did not — `IdentityResolver` was built in its own top-level `identity/` package, sibling to `agent/`, not inside it. |
+| §3 Components | **Superseded by implementation** | The component table and their listed dependencies (e.g. `EvidenceAggregator` depending on `ObjectRegistry`) do not match what exists — see §4's note. |
+| §4 Interfaces | **Superseded by implementation** | None of the concrete signatures shown were built as specified: `IdentityResolver.resolve()` takes two `OCOMObject`s (`identity/resolver.py`), not one, and `IdentityDecision` has fields `result`/`confidence`/`reasoning`/`matched_object_id`, not `outcome`/`canonical_identity`/`matched_identity`/`reason`; `EvidenceAggregator.aggregate()` takes `objects: list[OCOMObject]` directly, not a `canonical_identity` string via an injected `Registry`; `AnswerComposer.compose()` takes no `query` parameter and returns a flat `Answer(text, sources, grounded)`, not `AgentAnswer(query, statements, unresolved)`; `QueryEngine` and the `OCOMAgent` facade were never built at all — `agent/registry.py`'s `find_candidates(query)` absorbed search directly. This section is kept as a record of original intent, not a description of the code. |
+| §5 Data Flow | **Still valid at the conceptual level, superseded in call shape** | The ingestion-time and query-time sequencing (Normalizer → resolve → register/merge; Query → search → resolve → aggregate → answer) reflects what was built. The specific method calls shown (§4) do not. |
+| §6 Identity Resolution Strategy | **Superseded by [ADR-003](ADR-003-metadata-semantic-boundary.md), [ADR-005](ADR-005-identity-resolution-signal-model.md), and [OCOM-Identity-Resolution-v0.1.md](OCOM-Identity-Resolution-v0.1.md)** | "Identity Resolution lives in the Agent layer, not the Normalizer" still holds. The specific matching mechanism described here (exact-match on normalized `metadata["concept"]`, no other signal) was superseded first by Option B rule-based similarity (`OCOM-Identity-Resolution-v0.1.md` §3), then by the `identity`/`attributes`/`technical` namespace split (ADR-003) and the classification-as-fallback signal model (ADR-005). |
+| §7 Evidence Handling | **Still valid** | Merge-at-write, append-only — confirmed by [ADR-002](ADR-002-agent-vertical-slice-boundaries.md) and reused as the pattern for enrichment history in [OCOM-Enrichment-Provenance-v0.1.md](OCOM-Enrichment-Provenance-v0.1.md). |
+| §8 Security Boundaries | **Still valid** | Nothing built since has contradicted any boundary listed here. |
+| §9 Explicit Non-Goals | **Still valid** | None of these have been built; several are reaffirmed verbatim in later documents. |
+| §10 Open Questions | **Mixed** | Q2 (matching heuristic beyond exact match) and Q3 (need a third, ambiguous outcome) are resolved — Option B similarity and the `MATCH`/`NEW`/`UNCERTAIN` three-outcome model, respectively, both realized in `identity/`. Q5 (is an LLM required in `AnswerComposer`) is resolved: no, per ADR-002. Q1, Q4, Q6 remain genuinely open. |
+
 ## 1. Purpose
 
 OCOM Reader (Phase 1) proved that raw data from a source can be turned

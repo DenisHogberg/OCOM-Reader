@@ -13,6 +13,13 @@ This class implements the `Normalizer` interface and nothing more.
 Replacing it later with an LLM-based Normalizer (structured output +
 JSON Schema validation + confidence scoring) requires no change to
 that interface, the Adapter, or the core — only a new class here.
+
+Metadata is written under `metadata["technical"]`, per
+docs/architecture/ADR-003-metadata-semantic-boundary.md and
+docs/architecture/ADR-004-metadata-namespace-migration.md. This
+Normalizer never populates `metadata["identity"]` — it derives no name
+or concept from the file, only path-derived facts, so it has nothing
+identity-relevant to propose.
 """
 
 from __future__ import annotations
@@ -45,7 +52,9 @@ class FilesystemDocumentationNormalizer(Normalizer):
         return f"fsdoc:{digest[:16]}"
 
     def _build_metadata(self, raw: RawDocument) -> dict[str, Any]:
-        return {**raw.metadata, "content_length": len(raw.content)}
+        return {
+            "technical": {**raw.metadata, "content_length": len(raw.content)},
+        }
 
     def _build_evidence(self, raw: RawDocument, identity: str) -> Evidence:
         return Evidence(

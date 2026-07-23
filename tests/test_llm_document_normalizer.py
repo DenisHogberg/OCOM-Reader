@@ -45,8 +45,8 @@ def test_normalize_returns_valid_ocom_object(tmp_path: Path) -> None:
 
     assert isinstance(obj, OCOMObject)
     assert obj.identity == "concept:ocom-object"
-    assert obj.metadata["concept"] == "OCOM Object"
-    assert obj.metadata["confidence"] == "Low"
+    assert obj.metadata["identity"]["concept"] == "OCOM Object"
+    assert obj.metadata["technical"]["confidence"] == "Low"
     assert len(obj.evidence) == 1
     assert obj.evidence[0].reference == str(record.path)
     assert obj.evidence[0].excerpt == "An Object is identifiable."

@@ -21,10 +21,12 @@ def test_normalize_returns_ocom_object(tmp_path: Path) -> None:
     assert isinstance(obj, OCOMObject)
     assert obj.object_type == "Document"
     assert obj.metadata == {
-        "filename": "a.md",
-        "extension": ".md",
-        "size_bytes": record.metadata["size_bytes"],
-        "content_length": len("# Title\n\nBody"),
+        "technical": {
+            "filename": "a.md",
+            "extension": ".md",
+            "size_bytes": record.metadata["size_bytes"],
+            "content_length": len("# Title\n\nBody"),
+        },
     }
 
 

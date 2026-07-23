@@ -18,10 +18,19 @@ is validated against `ExtractionResult` (a pydantic model) before
 anything is built from it. A model that returns malformed output fails
 validation loudly rather than silently producing a bad OCOMObject.
 
-Confidence: prepared as `metadata["confidence"]`, fixed at `"Low"` per
-the OCOM Confidence Model (Memory/Confidence.md.docx) — "AI inference
-only" is the textbook Low case. No scoring logic is implemented; this
-is a placeholder for the future Confidence Model, not a computed score.
+Confidence: prepared as `metadata["technical"]["confidence"]`, fixed at
+`"Low"` per the OCOM Confidence Model (Memory/Confidence.md.docx) —
+"AI inference only" is the textbook Low case. No scoring logic is
+implemented; this is a placeholder for the future Confidence Model,
+not a computed score.
+
+Metadata namespaces follow
+docs/architecture/ADR-003-metadata-semantic-boundary.md and
+docs/architecture/ADR-004-metadata-namespace-migration.md: the LLM's
+extracted `concept` — the one value this Normalizer proposes that is
+actually appropriate for identity comparison — goes under
+`metadata["identity"]`. Everything else (file facts, confidence) goes
+under `metadata["technical"]`.
 
 The LLM call itself is injected (`llm_client`), not hardcoded, so this
 class can be tested deterministically without network access or an API
@@ -128,10 +137,12 @@ class LLMDocumentNormalizer(Normalizer):
             identity=identity,
             object_type=result.object_type,
             metadata={
-                **raw.metadata,
-                "content_length": len(raw.content),
-                "concept": result.concept,
-                "confidence": "Low",
+                "identity": {"concept": result.concept},
+                "technical": {
+                    **raw.metadata,
+                    "content_length": len(raw.content),
+                    "confidence": "Low",
+                },
             },
             evidence=[evidence],
         )

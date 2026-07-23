@@ -23,7 +23,7 @@ def test_full_pipeline_from_document_to_storage(tmp_path: Path) -> None:
 
     [stored] = list(storage.list())
     assert stored.object_type == "Document"
-    assert stored.metadata["filename"] == "object.md"
+    assert stored.metadata["technical"]["filename"] == "object.md"
     assert stored.evidence[0].reference == str(docs_dir / "object.md")
 
     reloaded = storage.get(stored.identity)
