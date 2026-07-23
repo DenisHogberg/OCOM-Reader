@@ -35,7 +35,7 @@ def test_question_object_evidence_answer_vertical_slice(tmp_path: Path) -> None:
         OCOMObject(
             identity="concept:ocom-object",
             object_type="Concept",
-            metadata={"name": "OCOM Object"},
+            metadata={"identity": {"name": "OCOM Object"}},
             evidence=[
                 Evidence(
                     identity="evidence:object-md",
@@ -62,7 +62,7 @@ def test_answer_cites_evidence_from_every_matching_object(tmp_path: Path) -> Non
         OCOMObject(
             identity="doc:object-md",
             object_type="Concept",
-            metadata={"name": "OCOM Object"},
+            metadata={"identity": {"name": "OCOM Object"}},
             evidence=[
                 Evidence(
                     identity="evidence:object-md",
@@ -78,7 +78,7 @@ def test_answer_cites_evidence_from_every_matching_object(tmp_path: Path) -> Non
         OCOMObject(
             identity="doc:architecture-md",
             object_type="Concept",
-            metadata={"name": "OCOM Object Architecture"},
+            metadata={"identity": {"name": "OCOM Object Architecture"}},
             evidence=[
                 Evidence(
                     identity="evidence:architecture-md",
