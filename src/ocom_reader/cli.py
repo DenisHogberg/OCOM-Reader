@@ -31,6 +31,11 @@ M017: `plugin list/info/enable/disable/reload` manage the plugin
 infrastructure (`plugins/`) — pure bookkeeping over `PluginManager`,
 never touching `RetrievalEngine`/`KnowledgeRegistry`/`Indexer`/`Composer`.
 See MILESTONE-017-DESIGN.md.
+
+M018: `web` starts the Web UI server (`web/`) — the browser is another
+Reader client, not another implementation; `web/api.py` calls the same
+`Reader`/`WorkspaceManager`/`PluginManager` this CLI already uses.
+Binds to 127.0.0.1 by default. See MILESTONE-018-DESIGN.md.
 """
 
 from __future__ import annotations
@@ -56,6 +61,7 @@ from ocom_reader.commands import run_ask, run_explain, run_related, run_search
 from ocom_reader.interactive import run_interactive
 from ocom_reader.plugins import PluginError, PluginManager
 from ocom_reader.reader import Reader
+from ocom_reader.web import DEFAULT_HOST, DEFAULT_PORT, start_server
 from ocom_reader.workspace import WorkspaceError, WorkspaceManager
 
 EPILOG = """\
@@ -67,6 +73,7 @@ Examples:
   ocom-reader repo add ~/Projects/MyProject
   ocom-reader repo use MyProject
   ocom-reader                      (interactive session)
+  ocom-reader web                  (start the Web UI at http://127.0.0.1:8765)
   ocom-reader completion bash      (print a bash completion script)
 """
 
@@ -159,6 +166,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     plugin_reload = plugin_subparsers.add_parser("reload", help="Reload one plugin, or all if no id given")
     plugin_reload.add_argument("id", nargs="?")
+
+    web_parser = subparsers.add_parser("web", help="Start the Web UI server")
+    web_parser.add_argument("--host", default=DEFAULT_HOST, help=f"Interface to bind (default: {DEFAULT_HOST})")
+    web_parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port to bind (default: {DEFAULT_PORT})")
 
     return parser
 
@@ -313,6 +324,30 @@ def main(argv: Optional[list[str]] = None) -> int:
         except (WorkspaceError, PluginError) as exc:
             print(style(f"Error: {exc}", "yellow", color=color))
             return 1
+
+    if args.command == "web":
+        try:
+            repo_path = _resolve_repo_path(args, workspace)
+        except WorkspaceError as exc:
+            print(style(f"Error: {exc}", "yellow", color=color))
+            return 1
+        server = start_server(
+            host=args.host,
+            port=args.port,
+            repository_root=repo_path,
+            workspace_state_path=args.workspace_file,
+            use_persistence=not args.no_cache,
+            plugin_state_path=args.plugin_state_file,
+            plugin_dir=args.plugin_dir,
+        )
+        print(f"OCOM Reader Web UI running at http://{args.host}:{args.port}/ (Ctrl-C to stop)")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.server_close()
+        return 0
 
     if args.command is None:
         try:

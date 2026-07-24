@@ -443,6 +443,48 @@ def test_a_broken_plugin_never_prevents_the_cli_from_working(repo: Path, tmp_pat
     assert "No plugins discovered" in output
 
 
+# --- Web UI (M018) -------------------------------------------------------
+
+
+def test_web_command_starts_the_server_and_serves_forever_is_called(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The CLI wiring itself: build the real server, call serve_forever
+    exactly once, and clean up. serve_forever is replaced with a no-op
+    stand-in for the assertion (a real blocking call would hang the
+    test) — the server construction and routing themselves are already
+    covered end-to-end by test_web_server.py's real sockets."""
+    calls = {"serve_forever": 0, "server_close": 0}
+    import ocom_reader.cli as cli_module
+
+    real_start_server = cli_module.start_server
+
+    def wrapped_start_server(*args, **kwargs):
+        server = real_start_server(*args, **kwargs)
+        original_close = server.server_close
+
+        def fake_serve_forever():
+            calls["serve_forever"] += 1
+
+        def fake_close():
+            calls["server_close"] += 1
+            original_close()
+
+        server.serve_forever = fake_serve_forever
+        server.server_close = fake_close
+        return server
+
+    monkeypatch.setattr(cli_module, "start_server", wrapped_start_server)
+
+    exit_code = main(["--repo", str(repo), "--no-cache", "web", "--port", "0"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Web UI running" in output
+    assert calls["serve_forever"] == 1
+    assert calls["server_close"] == 1
+
+
 # --- Real repository smoke test (installed console script) --------------------
 
 
