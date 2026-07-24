@@ -1,10 +1,18 @@
 # OCOM Reader
 
-OCOM Reader is the first reference **Adapter** implementation of the OCOM
-architecture — not a product, not a RAG, not a documentation chatbot. It
-exists to prove out a clean, source-agnostic core that future Adapters
-(GitHub, CRM, Jira, BI, payment systems, ...) can plug into without ever
-touching it.
+OCOM Reader began as the first reference **Adapter** implementation of the
+OCOM architecture — not a product, not a RAG, not a documentation chatbot —
+proving out a clean, source-agnostic core that future Adapters (GitHub, CRM,
+Jira, BI, payment systems, ...) can plug into without ever touching it
+(Phases 1-5 below).
+
+Built on top of that core, this repository now also ships a working
+**OCOM Reader MVP**: a small application that indexes this repository's own
+Markdown documentation and answers questions about it — deterministically,
+with no LLM, no embeddings, and no semantic search anywhere in the pipeline.
+See [Reader MVP](#reader-mvp) below for how to use it, and
+[`docs/architecture/MILESTONE-009-010.md`](docs/architecture/MILESTONE-009-010.md)
+for the full architecture.
 
 ## Architectural principles (binding for this codebase)
 
@@ -50,14 +58,72 @@ src/ocom_reader/
 
   normalizers/filesystem_documentation_normalizer.py
     FilesystemDocumentationNormalizer     — deterministic, non-LLM Normalizer v0.1
+
+  indexer/      RepositoryIndexBuilder    — indexes this repo's own Markdown docs        (M006)
+  registry/     RegistryBuilder           — pointer-only knowledge graph over the index  (M007)
+  retrieval/    RetrievalEngine           — deterministic search + ranking              (M008)
+  composer/     AnswerComposer            — RetrievalResult -> ComposedAnswer            (M009-010)
+  reader.py     Reader                    — public facade over the four layers above     (M009-010)
+  cli.py, __main__.py                     — CLI: `ocom-reader` / `python -m ocom_reader` (M009-010)
 ```
 
-## Phase 1 scope
+`indexer/` through `cli.py` are a second, independent pipeline built on top
+of the Adapter/Normalizer core — see [Reader MVP](#reader-mvp) below and
+[`docs/architecture/`](docs/architecture/) (MILESTONE-006 through
+MILESTONE-009-010) for their full design and architecture.
+
+## Reader MVP
+
+Ask questions about this repository's own documentation:
+
+```bash
+pip install -e .
+
+ocom-reader ask "identity resolution"
+ocom-reader search "registry"
+ocom-reader related docs/architecture/MILESTONE-007.md
+ocom-reader explain "identity resolution"
+
+# equivalent, no install required:
+python -m ocom_reader ask "runtime"
+```
+
+Pipeline: `Repository -> RepositoryIndex (M006) -> KnowledgeRegistry (M007)
+-> RetrievalEngine (M008) -> AnswerComposer (M009-010) -> Reader / CLI`.
+Every layer is deterministic and rule-based — no LLM, no embeddings, no
+semantic search, no vector store, anywhere in this pipeline. Same query
+against an unchanged repository always produces byte-identical output.
+
+Programmatic use:
+
+```python
+from pathlib import Path
+from ocom_reader.reader import Reader
+
+reader = Reader(Path("."))
+answer = reader.answer("identity resolution")   # -> ComposedAnswer
+reader.search("registry")                       # -> ranked RetrievalMatch list
+reader.related("docs/architecture/MILESTONE-007.md")  # -> direct neighbors
+reader.explain("identity resolution")            # -> evidence + related, with reasons
+```
+
+See [`docs/architecture/MILESTONE-009-010.md`](docs/architecture/MILESTONE-009-010.md)
+for the full architecture, answer format, and known limitations, and
+MILESTONE-006/007/008 for the Indexer, Registry, and Retrieval layers it's
+built on.
+
+## Adapter/Normalizer Core (Phases 1-5, historical)
+
+The sections below document the original OCOM Adapter/Normalizer core the
+Reader MVP above is built on top of. `core/`, `interfaces/`, `storage/`,
+`adapters/`, and `normalizers/` have not changed since Phase 5.
+
+### Phase 1 scope
 
 Project structure, `OCOMObject` working model, `Evidence`, the three
 core interfaces, a local JSON `Storage`, config, logging, entry point.
 
-## Phase 2 scope
+### Phase 2 scope
 
 The first concrete source: `FilesystemDocumentationAdapter`. It reads a
 local folder, finds `.md`/`.txt` files, and returns only raw data —
@@ -68,7 +134,7 @@ not call an LLM, and does not normalize anything.
 Nothing in `core/` or `interfaces/` changed to add this source — that
 is the point of this phase.
 
-## Phase 3 scope (current) — Normalizer v0.1, no LLM
+### Phase 3 scope — Normalizer v0.1, no LLM
 
 `FilesystemDocumentationNormalizer` now has a real, fully deterministic
 implementation of `normalize()`:
@@ -98,7 +164,7 @@ touching the interface, the Adapter, or the core.
 first complete pass: `Document -> Adapter -> Normalizer -> OCOMObject
 -> Storage`.
 
-## Phase 4 scope (current) — Reasoning Consistency Test v0.1
+### Phase 4 scope — Reasoning Consistency Test v0.1
 
 [`tests/test_reasoning_consistency_v0_1.py`](tests/test_reasoning_consistency_v0_1.py)
 tests the OCOM Object idea itself, not LLM quality — no LLM is involved.
@@ -121,7 +187,7 @@ This defines exactly what the next phase — an LLM-based Normalizer with
 structured output — needs to supply: the decision that two sources
 refer to the same object, nothing else.
 
-## Phase 5 scope (current) — LLM-based Normalizer v0.1
+### Phase 5 scope — LLM-based Normalizer v0.1
 
 [`normalizers/llm_document_normalizer.py`](src/ocom_reader/normalizers/llm_document_normalizer.py)
 adds `LLMDocumentNormalizer`, a second implementation of the same
@@ -163,6 +229,11 @@ stored object carries both Evidence entries, each with its own
 
 ```bash
 pip install -e .
+
+# Reader MVP (M006-M010) — see "Reader MVP" above
+ocom-reader ask "runtime"
+
+# Phase 1-5 Adapter/Normalizer core smoke test
 python -m ocom_reader.main
 ```
 

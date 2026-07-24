@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ocom-reader = "ocom_reader.main:main"
+ocom-reader = "ocom_reader.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ocom_reader"]
