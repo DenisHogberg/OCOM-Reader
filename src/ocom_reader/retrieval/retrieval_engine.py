@@ -9,8 +9,11 @@ tests/test_retrieval_engine.py's invariant checks).
 Matching is two-tier, and both tiers stay fully explainable via
 MatchReason:
 
-  1. Primary matches — a document whose title, a heading, or its
-     preview contains a query token (RepositoryIndex data).
+  1. Primary matches — a document whose title, identifier (M014;
+     document.id, which is also its path), a heading, or its preview
+     contains a query token (RepositoryIndex data). preview_match can
+     now repeat, up to a small cap, once per real occurrence in the
+     preview (M014's honestly-scoped "keyword frequency").
   2. Secondary matches — entries connected to a primary match via a
      KnowledgeRelation (builds_on / references / architecture_sequence)
      that did not themselves match the query text. Expansion follows
@@ -21,6 +24,14 @@ MatchReason:
      explainability, never in the reason kind. This is "getting
      related documents" per this milestone's own requirement, not a
      second, independent search.
+
+Every match (primary or secondary) also gets `importance` reasons
+(M014) — one per distinct document that references it in
+KnowledgeRegistry, capped, added on top of however it was found. This
+never creates a match on its own: a highly-referenced document that
+doesn't match the query text or relation graph at all still never
+appears in results, per RetrievalEngine's own explainability
+invariant — importance only reorders documents already surfaced.
 
 No LLM, no embeddings, no semantic search, no fuzzy matching: every
 match is a literal substring check against already-extracted,
@@ -35,7 +46,7 @@ from ocom_reader.registry.models import RegistryEntry
 from ocom_reader.registry.registry import KnowledgeRegistry
 from ocom_reader.retrieval.models import MatchReason, QueryObject, RetrievalMatch, RetrievalResult
 from ocom_reader.retrieval.query_parser import QueryParser
-from ocom_reader.retrieval.ranking import Ranker
+from ocom_reader.retrieval.ranking import IMPORTANCE_REFERENCE_CAP, PREVIEW_FREQUENCY_CAP, Ranker
 
 RELATION_KINDS = ("builds_on", "architecture_sequence", "references")
 
@@ -84,7 +95,7 @@ class RetrievalEngine:
                 continue  # defensive only — every indexed document has a registry entry in practice
             primary[entry.registry_id] = RetrievalMatch(
                 entry=entry,
-                reasons=reasons,
+                reasons=reasons + self._importance_reasons(entry.registry_id),
                 related=[e.registry_id for e in self._registry.neighbors(entry.registry_id)],
             )
         return primary
@@ -105,7 +116,7 @@ class RetrievalEngine:
                 else:
                     secondary[related_id] = RetrievalMatch(
                         entry=related_entry,
-                        reasons=[reason],
+                        reasons=[reason] + self._importance_reasons(related_id),
                         related=[e.registry_id for e in self._registry.neighbors(related_id)],
                     )
         return secondary
@@ -139,6 +150,11 @@ class RetrievalEngine:
             if token in title_lower:
                 reasons.append(MatchReason(kind="title_match", detail=token))
 
+        identifier_lower = document.id.lower()
+        for token in query.tokens:
+            if token in identifier_lower:
+                reasons.append(MatchReason(kind="identifier_match", detail=token))
+
         for heading in document.headings:
             heading_lower = heading.text.lower()
             for token in query.tokens:
@@ -147,7 +163,14 @@ class RetrievalEngine:
 
         preview_lower = document.preview.lower()
         for token in query.tokens:
-            if token in preview_lower:
-                reasons.append(MatchReason(kind="preview_match", detail=token))
+            occurrences = min(preview_lower.count(token), PREVIEW_FREQUENCY_CAP)
+            reasons.extend(MatchReason(kind="preview_match", detail=token) for _ in range(occurrences))
 
         return reasons
+
+    def _importance_reasons(self, registry_id: str) -> list[MatchReason]:
+        referencing_ids = sorted({r.source_id for r in self._registry.relations if r.target_id == registry_id})
+        return [
+            MatchReason(kind="importance", detail=source_id)
+            for source_id in referencing_ids[:IMPORTANCE_REFERENCE_CAP]
+        ]

@@ -11,10 +11,12 @@ docstring and MILESTONE-009-010.md for the full disambiguation.
 
 Every field here is either a pointer (`registry_id`, `document_id`),
 already-known text copied at presentation time from `RepositoryIndex`
-(`title`, `path`), or a fixed-template string (`reasons`, `answer`) —
-never generated prose. `evidence` reuses the word in its ordinary
-English sense ("documents that support this answer"), not
-`core.Evidence`/`agent.evidence.Evidence` — no relation to those models.
+(`title`, `path`, `preview` — added M015 for `cli_output.py`'s
+markdown-aware rendering to have real document text to render), or a
+fixed-template string (`reasons`, `answer`) — never generated prose.
+`evidence` reuses the word in its ordinary English sense ("documents
+that support this answer"), not `core.Evidence`/`agent.evidence.Evidence`
+— no relation to those models.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ class DocumentRef(BaseModel):
     title: str
     path: str
     document_type: str
+    preview: str = ""
 
 
 class ExplainedDocument(BaseModel):

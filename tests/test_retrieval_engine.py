@@ -16,7 +16,7 @@ from ocom_reader.indexer import RepositoryIndexBuilder
 from ocom_reader.registry import RegistryBuilder
 from ocom_reader.retrieval import MatchReason, QueryObject, QueryParser, Ranker, RetrievalEngine
 from ocom_reader.retrieval.models import RetrievalMatch
-from ocom_reader.retrieval.ranking import SCORE_WEIGHTS
+from ocom_reader.retrieval.ranking import IMPORTANCE_REFERENCE_CAP, PREVIEW_FREQUENCY_CAP, SCORE_WEIGHTS
 
 
 def _write(root: Path, relative_path: str, content: str) -> None:
@@ -183,8 +183,10 @@ def test_a_document_related_through_two_relations_gets_both_reasons(tmp_path: Pa
     matches = engine.search("runtime")
 
     foundation_match = next(m for m in matches if m.entry.registry_id == "docs/architecture/ADR-001-foundation.md")
-    # One relation (builds_on wins the dedup, per registry_builder rules) -> exactly one reason.
-    assert len(foundation_match.reasons) == 1
+    # One relation (builds_on wins the dedup, per registry_builder rules), plus
+    # one importance reason (M014) since ADR-002 references it -> two reasons.
+    assert len(foundation_match.reasons) == 2
+    assert {r.kind for r in foundation_match.reasons} == {"builds_on", "importance"}
 
 
 def test_relation_expansion_does_not_recurse_past_one_hop(tmp_path: Path) -> None:
@@ -317,13 +319,14 @@ def test_retrieve_returns_matches_ranked_highest_first(tmp_path: Path) -> None:
 def test_explain_renders_each_reason_as_a_readable_line(tmp_path: Path) -> None:
     # An H1 heading is indexed as both the document title and its first
     # Heading entry, so a token that appears there legitimately produces
-    # both a title_match and a heading_match reason.
+    # both a title_match and a heading_match reason. The filename itself
+    # also contains "runtime" -> identifier_match (M014).
     _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
     engine = _engine_for(tmp_path)
 
     [match] = engine.search("runtime")
 
-    assert engine.explain(match) == ["title_match: runtime", "heading_match: runtime"]
+    assert engine.explain(match) == ["title_match: runtime", "identifier_match: runtime", "heading_match: runtime"]
 
 
 # --- Determinism and statelessness -------------------------------------------
@@ -514,3 +517,190 @@ def test_unknown_query_against_the_real_repository_yields_no_matches() -> None:
 def test_query_object_model_is_a_valid_standalone_pydantic_model() -> None:
     query = QueryObject(raw="runtime", tokens=["runtime"])
     assert query.tokens == ["runtime"]
+
+
+# --- M014: identifier_match ---------------------------------------------------
+
+
+def test_identifier_match_finds_a_document_by_filename_even_without_a_title_hit(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/MILESTONE-003-findings.md", "# Identity Resolution Findings\n\nBody.")
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("003")
+
+    assert len(matches) == 1
+    assert MatchReason(kind="identifier_match", detail="003") in matches[0].reasons
+
+
+def test_identifier_match_is_case_insensitive(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-Runtime.md", "# Something Else\n\nBody unrelated to the term.")
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("RUNTIME")
+
+    assert any(r.kind == "identifier_match" for r in matches[0].reasons)
+
+
+def test_identifier_match_alone_still_counts_as_a_primary_match(tmp_path: Path) -> None:
+    """A document found only via its filename (no title/heading/preview
+    hit) must still be a primary match, not silently dropped."""
+    _write(tmp_path, "docs/architecture/MILESTONE-042.md", "# Unrelated Title\n\nUnrelated preview text.")
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("042")
+
+    assert len(matches) == 1
+    assert matches[0].entry.registry_id == "docs/architecture/MILESTONE-042.md"
+
+
+# --- M014: preview_match frequency ----------------------------------------
+
+
+def test_preview_match_counts_real_occurrences_up_to_the_cap(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "docs/architecture/ADR-001.md",
+        "# ADR-001\n\nProvenance provenance provenance provenance appears four times right here in the preview.",
+    )
+    engine = _engine_for(tmp_path)
+
+    [match] = engine.search("provenance")
+
+    preview_reasons = [r for r in match.reasons if r.kind == "preview_match"]
+    assert len(preview_reasons) == PREVIEW_FREQUENCY_CAP  # capped at 3, not 4
+
+
+def test_preview_match_single_occurrence_yields_one_reason(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001.md", "# ADR-001\n\nMentions provenance exactly once in this text.")
+    engine = _engine_for(tmp_path)
+
+    [match] = engine.search("provenance")
+
+    assert len([r for r in match.reasons if r.kind == "preview_match"]) == 1
+
+
+# --- M014: importance -----------------------------------------------------
+
+
+def test_importance_reasons_reflect_distinct_referencing_documents(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+    _write(tmp_path, "docs/architecture/ADR-002.md", "# Two\n\n**Builds on:** [Runtime](ADR-001-runtime.md)\n\nBody.")
+    _write(tmp_path, "docs/architecture/ADR-003.md", "# Three\n\nSee also [Runtime](ADR-001-runtime.md) here.")
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("runtime")
+    match = next(m for m in matches if m.entry.registry_id == "docs/architecture/ADR-001-runtime.md")
+
+    importance_reasons = {r.detail for r in match.reasons if r.kind == "importance"}
+    assert importance_reasons == {"docs/architecture/ADR-002.md", "docs/architecture/ADR-003.md"}
+
+
+def test_importance_deduplicates_multiple_relations_from_the_same_source(tmp_path: Path) -> None:
+    """One document referencing another via two different relation
+    kinds must contribute exactly one importance reason, not two."""
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+    _write(
+        tmp_path,
+        "docs/architecture/ADR-002.md",
+        "# Two\n\n**Builds on:** [Runtime](ADR-001-runtime.md)\n\n"
+        "Also references [Runtime](ADR-001-runtime.md) again in the body for good measure right here.",
+    )
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("runtime")
+    match = next(m for m in matches if m.entry.registry_id == "docs/architecture/ADR-001-runtime.md")
+
+    importance_reasons = [r for r in match.reasons if r.kind == "importance"]
+    assert len(importance_reasons) == 1
+
+
+def test_importance_is_capped(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+    for i in range(2, 7):  # five referencing documents, cap is 3
+        _write(
+            tmp_path,
+            f"docs/architecture/ADR-00{i}.md",
+            f"# Doc {i}\n\n**Builds on:** [Runtime](ADR-001-runtime.md)\n\nBody.",
+        )
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("runtime")
+    match = next(m for m in matches if m.entry.registry_id == "docs/architecture/ADR-001-runtime.md")
+
+    assert len([r for r in match.reasons if r.kind == "importance"]) == IMPORTANCE_REFERENCE_CAP
+
+
+def test_importance_never_creates_a_match_on_its_own(tmp_path: Path) -> None:
+    """A heavily-referenced document that doesn't match the query text
+    or relation graph at all must still never appear in results."""
+    _write(tmp_path, "docs/architecture/ADR-001-unrelated.md", "# Something Else Entirely\n\nUnrelated body.")
+    _write(
+        tmp_path,
+        "docs/architecture/ADR-002.md",
+        "# Two\n\n**Builds on:** [Unrelated](ADR-001-unrelated.md)\n\nBody.",
+    )
+    engine = _engine_for(tmp_path)
+
+    matches = engine.search("zzznonexistenttermxyz")
+
+    assert matches == []
+
+
+def test_a_document_with_no_inbound_references_gets_no_importance_reasons(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+    engine = _engine_for(tmp_path)
+
+    [match] = engine.search("runtime")
+
+    assert not any(r.kind == "importance" for r in match.reasons)
+
+
+# --- M014: weight table sums correctly for multi-signal matches ---------------
+
+
+def test_score_sums_every_new_and_existing_signal(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nMentions runtime once more right here.")
+    engine = _engine_for(tmp_path)
+
+    [match] = engine.rank(engine.search("runtime"))
+
+    kinds = [r.kind for r in match.reasons]
+    expected = sum(SCORE_WEIGHTS[k] for k in kinds)
+    assert match.score == expected
+    assert "title_match" in kinds
+    assert "identifier_match" in kinds
+    assert "heading_match" in kinds
+    assert "preview_match" in kinds
+
+
+# --- M014: ambiguous queries -------------------------------------------------
+
+
+def test_ambiguous_query_ranks_the_exact_identifier_match_above_generic_partial_matches(tmp_path: Path) -> None:
+    """Several MILESTONE-* documents all share the generic 'milestone'
+    token, but only one also matches the specific number — it must
+    rank first, not tie arbitrarily with the others."""
+    _write(tmp_path, "docs/architecture/MILESTONE-001.md", "# Milestone One\n\nBody.")
+    _write(tmp_path, "docs/architecture/MILESTONE-002.md", "# Milestone Two\n\nBody.")
+    _write(tmp_path, "docs/architecture/MILESTONE-003.md", "# Milestone Three\n\nBody.")
+    engine = _engine_for(tmp_path)
+
+    result = engine.retrieve("milestone-003")
+
+    assert result.matches[0].entry.registry_id == "docs/architecture/MILESTONE-003.md"
+    assert result.matches[0].score > result.matches[1].score
+
+
+def test_ambiguous_query_between_a_strong_single_signal_and_several_weak_ones(tmp_path: Path) -> None:
+    """A document matched only by title should still outrank one that
+    accumulated several small importance/reference signals but never
+    matched the query text at all — importance never overrides a real
+    text match."""
+    _write(tmp_path, "docs/architecture/ADR-001-target.md", "# Target Concept\n\nBody.")
+    _write(tmp_path, "docs/architecture/ADR-002.md", "# Two\n\n**Builds on:** [Target](ADR-001-target.md)\n\nBody.")
+    _write(tmp_path, "docs/architecture/ADR-003.md", "# Three\n\n**Builds on:** [Target](ADR-001-target.md)\n\nBody.")
+    engine = _engine_for(tmp_path)
+
+    result = engine.retrieve("target concept")
+
+    assert result.matches[0].entry.registry_id == "docs/architecture/ADR-001-target.md"

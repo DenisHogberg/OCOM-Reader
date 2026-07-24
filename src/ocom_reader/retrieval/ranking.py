@@ -8,8 +8,11 @@ stronger evidence than a "references" relation), the same "fixed
 table, not inference" discipline already used by
 intelligence/classification.py and registry/registry_builder.py.
 
-document_type is deliberately NOT used as a scoring factor — no
-grounded weighting for "an ADR should outrank a README by how much"
+`identifier_match` and `importance` were added in M014 — see
+MILESTONE-014-DESIGN.md for how each was grounded in already-indexed
+data (never a guessed weight for something unmeasured).
+`document_type` is still deliberately NOT used as a scoring factor —
+no grounded weighting for "an ADR should outrank a README by how much"
 exists yet, and inventing one without evidence would be exactly the
 kind of unvalidated-threshold guess this project has repeatedly
 avoided (e.g. ADR-005 leaving its own thresholds unset). Only
@@ -23,12 +26,20 @@ from ocom_reader.retrieval.models import RetrievalMatch
 
 SCORE_WEIGHTS: dict[str, float] = {
     "title_match": 10.0,
+    "identifier_match": 8.0,
     "heading_match": 5.0,
-    "preview_match": 2.0,
     "builds_on": 3.0,
     "architecture_sequence": 2.0,
+    "preview_match": 2.0,
+    "importance": 0.5,
     "references": 1.0,
 }
+
+# Both caps deliberately small and round: neither a repetitive preview
+# nor a heavily-cross-referenced document should be able to
+# runaway-dominate a result on that signal alone.
+PREVIEW_FREQUENCY_CAP = 3
+IMPORTANCE_REFERENCE_CAP = 3
 
 
 class Ranker:

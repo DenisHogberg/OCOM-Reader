@@ -150,6 +150,56 @@ def test_reader_related_of_unknown_id_is_empty(tmp_path: Path) -> None:
     assert reader.related("does/not/exist.md") == []
 
 
+# --- Persistence (M012) ------------------------------------------------------
+
+
+def test_reader_persists_to_ocom_by_default(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+
+    Reader(tmp_path)
+
+    assert (tmp_path / ".ocom" / "metadata.json").exists()
+    assert (tmp_path / ".ocom" / "index.json").exists()
+    assert (tmp_path / ".ocom" / "registry.json").exists()
+
+
+def test_reader_with_use_persistence_false_writes_nothing(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+
+    Reader(tmp_path, use_persistence=False)
+
+    assert not (tmp_path / ".ocom").exists()
+
+
+def test_reader_answer_is_identical_with_and_without_persistence(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+
+    cached = Reader(tmp_path).answer("runtime")
+    uncached = Reader(tmp_path, use_persistence=False).answer("runtime")
+
+    assert cached.model_dump() == uncached.model_dump()
+
+
+def test_reader_picks_up_a_real_change_on_reconstruction(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nOriginal body.")
+    Reader(tmp_path)
+
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\n## Evidence Section\n\nNew content.")
+    answer = Reader(tmp_path).answer("evidence")
+
+    assert answer.grounded is True
+
+
+def test_reader_second_construction_reuses_a_compatible_snapshot(tmp_path: Path) -> None:
+    _write(tmp_path, "docs/architecture/ADR-001-runtime.md", "# Runtime\n\nBody.")
+    Reader(tmp_path)
+    written_at_first = (tmp_path / ".ocom" / "index.json").read_text()
+
+    Reader(tmp_path)  # nothing changed on disk
+
+    assert (tmp_path / ".ocom" / "index.json").read_text() == written_at_first
+
+
 # --- Real repository verification -----------------------------------------
 
 

@@ -15,8 +15,10 @@ from ocom_reader.retrieval.models import MatchReason
 
 REASON_TEMPLATES: dict[str, str] = {
     "title_match": "Title match: {detail}",
+    "identifier_match": "Matches document identifier: {detail}",
     "heading_match": "Heading match: {detail}",
     "preview_match": "Preview match: {detail}",
+    "importance": "Referenced by: {detail}",
     "builds_on": "Related via builds_on to {detail}",
     "references": "Related via references to {detail}",
     "architecture_sequence": "Related via architecture_sequence to {detail}",

@@ -42,7 +42,10 @@ from ocom_reader.indexer.models import RepositoryIndex
 from ocom_reader.registry.registry import KnowledgeRegistry
 from ocom_reader.retrieval.models import RetrievalMatch, RetrievalResult
 
-TEXT_REASON_KINDS = {"title_match", "heading_match", "preview_match"}
+TEXT_REASON_KINDS = {"title_match", "identifier_match", "heading_match", "preview_match"}
+# "importance" (M014) is deliberately excluded — it's a modifier present
+# on both evidence and related documents alike, never itself a reason a
+# document counts as directly matching the query.
 ORDERING_RELATION_KINDS = {"builds_on", "architecture_sequence"}
 
 
@@ -96,12 +99,14 @@ class AnswerComposer:
         indexed = self._index.get(document_id)
         title = indexed.title if indexed is not None else document_id
         path = indexed.path if indexed is not None else document_id
+        preview = indexed.preview if indexed is not None else ""
         return DocumentRef(
             registry_id=registry_id,
             document_id=document_id,
             title=title,
             path=path,
             document_type=entry_type,
+            preview=preview,
         )
 
     def _answer_text(self, query: str, evidence: list[ExplainedDocument]) -> str:
