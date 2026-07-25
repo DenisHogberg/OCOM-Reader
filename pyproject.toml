@@ -11,6 +11,10 @@ dependencies = [
     "pydantic>=2.0",
 ]
 
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.30"]
+
 [project.scripts]
 ocom-reader = "ocom_reader.cli:main"
 

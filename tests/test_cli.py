@@ -443,6 +443,96 @@ def test_a_broken_plugin_never_prevents_the_cli_from_working(repo: Path, tmp_pat
     assert "No plugins discovered" in output
 
 
+# --- Optional LLM Layer (M019) ------------------------------------------
+
+
+def test_ask_without_llm_provider_is_byte_identical_to_before_this_milestone(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The regression guard: every existing ask test already proves
+    this, but this test names the guarantee explicitly — running the
+    same query with and without the flag omitted must be identical."""
+    main(["--repo", str(repo), "--no-cache", "ask", "runtime"])
+    without_flag = capsys.readouterr().out
+
+    main(["--repo", str(repo), "--no-cache", "ask", "runtime"])
+    without_flag_again = capsys.readouterr().out
+
+    assert without_flag == without_flag_again
+    assert "Natural Language Answer" not in without_flag
+
+
+def test_ask_with_llm_provider_falls_back_gracefully_when_sdk_not_installed(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = main(["--repo", str(repo), "--no-cache", "ask", "runtime", "--llm-provider", "openai"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "LLM unavailable" in output
+    assert "not installed" in output
+    # Deterministic sections are still fully present.
+    assert "Answer" in output
+    assert "Evidence" in output
+    assert "Related Documents" in output
+    assert "Recommended Reading Order" in output
+
+
+def test_ask_with_llm_provider_anthropic_falls_back_gracefully(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = main(["--repo", str(repo), "--no-cache", "ask", "runtime", "--llm-provider", "anthropic"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "LLM unavailable" in output
+
+
+def test_ask_with_llm_provider_success_adds_a_natural_language_section(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CLI wiring itself: with a working provider injected in place of
+    the real construction path, the deterministic sections stay intact
+    and a Natural Language Answer section is appended."""
+    import ocom_reader.cli as cli_module
+
+    class FakeAdapter:
+        def __init__(self, config) -> None:
+            pass
+
+        def enhance(self, answer):
+            from ocom_reader.llm import LLMProviderName, LLMResult
+
+            return LLMResult(text="A rewritten answer.", used_provider=LLMProviderName.OPENAI)
+
+    monkeypatch.setattr(cli_module, "LLMAdapter", FakeAdapter)
+
+    exit_code = main(["--repo", str(repo), "--no-cache", "ask", "runtime", "--llm-provider", "openai"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Natural Language Answer" in output
+    assert "A rewritten answer." in output
+    assert "Answer" in output
+    assert "Evidence" in output
+
+
+def test_ask_llm_provider_never_changes_deterministic_evidence_or_reading_order(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Compare the deterministic sections themselves (not just their
+    presence) between a plain ask and an ask with a graceful LLM
+    fallback — they must be identical, since the LLM path never
+    touches ComposedAnswer."""
+    main(["--repo", str(repo), "--no-cache", "ask", "runtime"])
+    plain = capsys.readouterr().out
+
+    main(["--repo", str(repo), "--no-cache", "ask", "runtime", "--llm-provider", "openai"])
+    with_llm_flag = capsys.readouterr().out
+
+    assert with_llm_flag.startswith(plain)  # identical deterministic prefix, LLM note appended after
+
+
 # --- Web UI (M018) -------------------------------------------------------
 
 

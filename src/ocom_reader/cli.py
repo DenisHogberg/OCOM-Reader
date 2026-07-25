@@ -59,6 +59,7 @@ from ocom_reader.cli_output import (
 )
 from ocom_reader.commands import run_ask, run_explain, run_related, run_search
 from ocom_reader.interactive import run_interactive
+from ocom_reader.llm import LLMAdapter, LLMConfig, LLMProviderName
 from ocom_reader.plugins import PluginError, PluginManager
 from ocom_reader.reader import Reader
 from ocom_reader.web import DEFAULT_HOST, DEFAULT_PORT, start_server
@@ -122,6 +123,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     ask_parser = subparsers.add_parser("ask", help="Ask a question, get a composed answer")
     ask_parser.add_argument("query")
+    ask_parser.add_argument(
+        "--llm-provider",
+        choices=["openai", "anthropic"],
+        default=None,
+        help="Optionally rewrite the answer with an LLM (presentation only; API key from "
+        "OPENAI_API_KEY/ANTHROPIC_API_KEY env var). Falls back silently to the "
+        "deterministic answer if unavailable.",
+    )
 
     search_parser = subparsers.add_parser("search", help="List ranked matching documents")
     search_parser.add_argument("query")
@@ -374,6 +383,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.command == "ask":
         answer = reader.answer(args.query)
         output = render_ask_rich(answer, color=color) if rich else run_ask(reader, args.query)
+
+        if args.llm_provider:
+            llm_config = LLMConfig(provider=LLMProviderName(args.llm_provider))
+            llm_result = LLMAdapter(llm_config).enhance(answer)
+            if llm_result.succeeded:
+                header = style("Natural Language Answer", "bold", "cyan", color=color)
+                output = f"{output}\n\n{header}\n  {llm_result.text}"
+            else:
+                note = style(
+                    f"(LLM unavailable: {llm_result.fallback_reason} — showing deterministic answer only)",
+                    "dim",
+                    color=color,
+                )
+                output = f"{output}\n\n{note}"
+
         maybe_page(output, enabled=can_page)
         return 0
     elif args.command == "search":
