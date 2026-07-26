@@ -14,6 +14,14 @@ See [Reader MVP](#reader-mvp) below for how to use it, and
 [`docs/architecture/MILESTONE-009-010.md`](docs/architecture/MILESTONE-009-010.md)
 for the full architecture.
 
+Per [ADR-007](docs/architecture/ADR-007-memory-before-knowledge.md), raw
+ingested records (`RawDocument` today, its counterparts for future sources
+later) are treated as Memory — persisted independently of whatever
+interpretation is built from them. That makes OCOM Reader's documentation
+adapter the first instance of a broader pattern, not a documentation-specific
+mechanism: this repository is the first component of what the architecture
+treats as an Operational Memory Platform, not only a Markdown reader.
+
 ## Architectural principles (binding for this codebase)
 
 - An `OCOMObject` is always source-agnostic. No source ever shapes its
@@ -71,6 +79,11 @@ src/ocom_reader/
 of the Adapter/Normalizer core — see [Reader MVP](#reader-mvp) below and
 [`docs/architecture/`](docs/architecture/) (MILESTONE-006 through
 MILESTONE-009-010) for their full design and architecture.
+
+`RawDocument` above is what [ADR-007](docs/architecture/ADR-007-memory-before-knowledge.md)
+formalizes as Memory — decided, not yet implemented as a persisted stage; see
+that ADR and [OCOM Knowledge Model v0.1](docs/architecture/OCOM-Knowledge-Model-v0.1.md)
+for what is built from it.
 
 ## Reader MVP
 

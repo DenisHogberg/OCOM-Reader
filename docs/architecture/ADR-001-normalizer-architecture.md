@@ -75,6 +75,8 @@ Adapter
  ↓
 Raw Data
  ↓
+Memory Entry (persisted)
+ ↓
 Normalizer
  ↓
 OCOM Object
@@ -86,6 +88,14 @@ Storage
 
 Notes on how this maps to the code:
 
+- **Memory Entry** is `RawDocument`, promoted to a persisted stage — see
+  [ADR-007](ADR-007-memory-before-knowledge.md). Raw Data becoming a
+  stored, immutable record before Normalizer ever sees it is that
+  decision, not a change to the Adapter/Normalizer boundary itself:
+  `Adapter` still knows nothing about `OCOMObject`, and `Normalizer`
+  still knows nothing about any source system — it now reads a
+  persisted Memory Entry instead of a transient in-memory record, which
+  is the only thing that changed.
 - `Evidence` is not a separate pipeline stage after `OCOM Object` — it
   is constructed by the Normalizer as part of building the `OCOMObject`
   (`OCOMObject.evidence: list[Evidence]`). The diagram is accurate as a

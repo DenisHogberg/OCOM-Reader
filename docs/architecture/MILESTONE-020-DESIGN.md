@@ -2,7 +2,7 @@
 
 **Date:** 25 July 2026
 **Status:** Design — architecture proposal, implementation not started.
-**Builds on:** [MILESTONE-019](MILESTONE-019.md) (Optional LLM Layer), [MILESTONE-009-010](MILESTONE-009-010.md) (Reader/Composer)
+**Builds on:** [MILESTONE-019](MILESTONE-019.md) (Optional LLM Layer), [MILESTONE-009-010](MILESTONE-009-010.md) (Reader/Composer), [ADR-007](ADR-007-memory-before-knowledge.md) (Knowledge is always derived from Memory — fixes what Knowledge Selection's inputs are ultimately built from; does not change this document's own pipeline)
 **Supersedes:** the "M020 Product Release" placeholder in [MILESTONE-019.md](MILESTONE-019.md)'s Roadmap — redirected to this scope by explicit author direction, 25 July 2026. Recorded here rather than silently overwritten.
 
 ## Objective

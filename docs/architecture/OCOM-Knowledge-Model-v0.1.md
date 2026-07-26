@@ -4,6 +4,7 @@
 **Date:** 25 July 2026
 **Builds on:** [MILESTONE-020-DESIGN.md](MILESTONE-020-DESIGN.md) (OCOM Expert Phase 1), [MILESTONE-019](MILESTONE-019.md) (Optional LLM Layer), the Reader/Evidence separation established since [MILESTONE-001](MILESTONE-001.md).
 **Consequence for MILESTONE-020-DESIGN.md:** that document's `KnowledgeItem`/`KnowledgeSelection` sketch predates this model and uses its own ad hoc shape (a `kind` field distinguishing `specification-evidence`/`expert-knowledge`). Once this document is approved, that sketch should be reconciled against the vocabulary defined here rather than left standing as a second, parallel shape. Not done in this document — named so it isn't silently forgotten.
+**Consequence of ADR-007:** that ADR fixes what everything in this document is ultimately built from — Knowledge (Concept, Fragment, Role Binding) is always derived from Memory, never from a source directly. §3's `Source` primitive, defined below as "where a Fragment's content currently physically resides," is what a Fragment's Memory Entry (`source` + `source identifier`, per ADR-007) resolves to once Memory exists as a persisted stage. This document's own primitives are unchanged by ADR-007 — only where they get their input is now fixed.
 
 ## 1. Purpose
 
@@ -88,7 +89,9 @@ file path, a URL, a database row, a paragraph inside a `.docx`. Source
 carries no interpretive weight and answers no question about meaning —
 only "where do I currently go to read this." A Fragment has exactly
 one current Source (its origin may change over time; that is a Fragment
-gaining a new Source record, not a new Fragment).
+gaining a new Source record, not a new Fragment). Per [ADR-007](ADR-007-memory-before-knowledge.md),
+Source is not the original external system directly — it resolves to
+the Fragment's Memory Entry, which is what actually persists origin.
 
 ## 4. Role Binding — Two Independent Axes
 
