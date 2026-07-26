@@ -14,7 +14,10 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from ocom_reader.adapters.filesystem_documentation import FilesystemDocumentationAdapter
+from ocom_reader.adapters.filesystem_documentation import (
+    FilesystemDocumentationAdapter,
+    to_memory_entry,
+)
 from ocom_reader.core.object import OCOMObject
 from ocom_reader.normalizers.llm_document_normalizer import LLMDocumentNormalizer
 
@@ -30,9 +33,11 @@ class FakeLLMClient:
 
 
 def _fetch_one(tmp_path: Path, name: str, content: str):
+    """Returns a MemoryEntry — see the identical note in
+    test_filesystem_documentation_normalizer.py."""
     (tmp_path / name).write_text(content)
     [record] = list(FilesystemDocumentationAdapter(tmp_path).fetch())
-    return record
+    return to_memory_entry(record)
 
 
 def test_normalize_returns_valid_ocom_object(tmp_path: Path) -> None:
@@ -48,7 +53,7 @@ def test_normalize_returns_valid_ocom_object(tmp_path: Path) -> None:
     assert obj.metadata["identity"]["concept"] == "OCOM Object"
     assert obj.metadata["technical"]["confidence"] == "Low"
     assert len(obj.evidence) == 1
-    assert obj.evidence[0].reference == str(record.path)
+    assert obj.evidence[0].reference == record.source_identifier
     assert obj.evidence[0].excerpt == "An Object is identifiable."
 
 

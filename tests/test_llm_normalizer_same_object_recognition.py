@@ -25,7 +25,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ocom_reader.adapters.filesystem_documentation import FilesystemDocumentationAdapter
+from ocom_reader.adapters.filesystem_documentation import (
+    FilesystemDocumentationAdapter,
+    to_memory_entry,
+)
 from ocom_reader.normalizers.llm_document_normalizer import LLMDocumentNormalizer
 from ocom_reader.storage.local_storage import LocalJSONStorage
 
@@ -65,7 +68,7 @@ def test_two_documents_in_different_languages_resolve_to_one_object(tmp_path: Pa
     storage = LocalJSONStorage(tmp_path / "data")
 
     for raw in adapter.fetch():
-        obj = normalizer.normalize(raw)
+        obj = normalizer.normalize(to_memory_entry(raw))
         existing = storage.get(obj.identity)
         if existing is not None:
             obj = existing.model_copy(update={"evidence": existing.evidence + obj.evidence})

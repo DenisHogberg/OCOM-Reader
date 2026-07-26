@@ -33,7 +33,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ocom_reader.adapters.filesystem_documentation import FilesystemDocumentationAdapter
+from ocom_reader.adapters.filesystem_documentation import (
+    FilesystemDocumentationAdapter,
+    to_memory_entry,
+)
 from ocom_reader.core.object import OCOMObject
 from ocom_reader.normalizers.filesystem_documentation_normalizer import (
     FilesystemDocumentationNormalizer,
@@ -58,7 +61,7 @@ DOC_B = (
 def _normalize_all(tmp_path: Path) -> list[OCOMObject]:
     adapter = FilesystemDocumentationAdapter(tmp_path)
     normalizer = FilesystemDocumentationNormalizer()
-    return [normalizer.normalize(raw) for raw in adapter.fetch()]
+    return [normalizer.normalize(to_memory_entry(raw)) for raw in adapter.fetch()]
 
 
 def test_deterministic_normalizer_cannot_recognize_same_object_across_sources(

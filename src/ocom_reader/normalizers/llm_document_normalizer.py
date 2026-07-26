@@ -1,7 +1,7 @@
 """Normalizer v0.1 — LLM-based, structured output.
 
 Same contract as FilesystemDocumentationNormalizer: implements
-`Normalizer.normalize(raw: RawDocument) -> OCOMObject`. Nothing about
+`Normalizer.normalize(raw: MemoryEntry) -> OCOMObject`. Nothing about
 OCOMObject, Evidence, Adapter, or Storage changes to support this —
 only a new Normalizer is added, exactly as the interface was designed
 to allow.
@@ -43,12 +43,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from pathlib import Path
 from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from ocom_reader.adapters.filesystem_documentation import RawDocument
 from ocom_reader.core.evidence import Evidence
+from ocom_reader.core.memory import MemoryEntry
 from ocom_reader.core.object import OCOMObject
 from ocom_reader.interfaces.normalizer import Normalizer
 
@@ -113,23 +114,29 @@ def _slugify(text: str) -> str:
     return slug or "unknown"
 
 
-def _file_hash(raw: RawDocument) -> str:
-    return hashlib.sha256(str(raw.path.resolve()).encode("utf-8")).hexdigest()[:16]
+def _file_hash(raw: MemoryEntry) -> str:
+    """Reconstructs and resolves the Path from `source_identifier`, reproducing
+    the exact pre-ADR-007 behavior (`raw.path.resolve()`) byte-identically —
+    see `FilesystemDocumentationNormalizer._build_identity` for the same
+    pattern with its rationale spelled out."""
+    return hashlib.sha256(
+        str(Path(raw.source_identifier).resolve()).encode("utf-8")
+    ).hexdigest()[:16]
 
 
 class LLMDocumentNormalizer(Normalizer):
     def __init__(self, llm_client: LLMClient) -> None:
         self._llm_client = llm_client
 
-    def normalize(self, raw: RawDocument) -> OCOMObject:
-        result = ExtractionResult.model_validate(self._llm_client.extract(raw.content))
+    def normalize(self, raw: MemoryEntry) -> OCOMObject:
+        result = ExtractionResult.model_validate(self._llm_client.extract(raw.raw_content))
         identity = f"concept:{_slugify(result.concept)}"
 
         evidence = Evidence(
             identity=f"evidence:fsdoc:{_file_hash(raw)}",
             source=SOURCE_NAME,
-            reference=str(raw.path),
-            captured_at=raw.modified_at,
+            reference=raw.source_identifier,
+            captured_at=raw.timestamp,
             excerpt=result.excerpt,
         )
 
@@ -140,7 +147,7 @@ class LLMDocumentNormalizer(Normalizer):
                 "identity": {"concept": result.concept},
                 "technical": {
                     **raw.metadata,
-                    "content_length": len(raw.content),
+                    "content_length": len(raw.raw_content),
                     "confidence": "Low",
                 },
             },

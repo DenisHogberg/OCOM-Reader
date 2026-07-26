@@ -1,8 +1,11 @@
-"""Document -> Adapter -> Normalizer -> OCOMObject -> Storage, end to end."""
+"""Document -> Adapter -> MemoryEntry -> Normalizer -> OCOMObject -> Storage, end to end."""
 
 from pathlib import Path
 
-from ocom_reader.adapters.filesystem_documentation import FilesystemDocumentationAdapter
+from ocom_reader.adapters.filesystem_documentation import (
+    FilesystemDocumentationAdapter,
+    to_memory_entry,
+)
 from ocom_reader.normalizers.filesystem_documentation_normalizer import (
     FilesystemDocumentationNormalizer,
 )
@@ -19,7 +22,7 @@ def test_full_pipeline_from_document_to_storage(tmp_path: Path) -> None:
     storage = LocalJSONStorage(tmp_path / "data")
 
     for raw in adapter.fetch():
-        storage.save(normalizer.normalize(raw))
+        storage.save(normalizer.normalize(to_memory_entry(raw)))
 
     [stored] = list(storage.list())
     assert stored.object_type == "Document"

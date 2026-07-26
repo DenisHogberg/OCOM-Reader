@@ -15,7 +15,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ocom_reader.adapters.filesystem_documentation import FilesystemDocumentationAdapter
+from ocom_reader.adapters.filesystem_documentation import (
+    FilesystemDocumentationAdapter,
+    to_memory_entry,
+)
 from ocom_reader.normalizers.llm_document_normalizer import LLMDocumentNormalizer
 from ocom_reader.runtime.context import RuntimeContext
 from ocom_reader.runtime.pipeline import ask, ingest_document
@@ -52,7 +55,7 @@ def test_full_happy_path_document_to_grounded_answer(tmp_path: Path) -> None:
 
     ctx = RuntimeContext.build(LocalJSONStorage(tmp_path / "data"))
 
-    result = ingest_document(raw, normalizer, ctx)
+    result = ingest_document(to_memory_entry(raw), normalizer, ctx)
 
     # Classification ran and enriched the object; identity resolution
     # correctly found nothing to compare against yet.
@@ -78,7 +81,7 @@ def test_unknown_object_is_not_grounded(tmp_path: Path) -> None:
     adapter = FilesystemDocumentationAdapter(docs_dir)
     [raw] = list(adapter.fetch())
     ctx = RuntimeContext.build(LocalJSONStorage(tmp_path / "data"))
-    ingest_document(raw, LLMDocumentNormalizer(FakeConceptClient("Affiliate Manager")), ctx)
+    ingest_document(to_memory_entry(raw), LLMDocumentNormalizer(FakeConceptClient("Affiliate Manager")), ctx)
 
     # A query about something never ingested, with no vocabulary overlap
     # with anything in storage.
@@ -102,7 +105,7 @@ def test_identity_conflict_produces_uncertain_and_does_not_auto_merge(tmp_path: 
     )
 
     adapter = FilesystemDocumentationAdapter(docs_dir)
-    raws = {raw.path.name: raw for raw in adapter.fetch()}
+    raws = {raw.path.name: to_memory_entry(raw) for raw in adapter.fetch()}
     ctx = RuntimeContext.build(LocalJSONStorage(tmp_path / "data"))
 
     first = ingest_document(
