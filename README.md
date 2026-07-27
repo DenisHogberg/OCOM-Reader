@@ -1,258 +1,190 @@
 # OCOM Reader
 
-OCOM Reader began as the first reference **Adapter** implementation of the
-OCOM architecture — not a product, not a RAG, not a documentation chatbot —
-proving out a clean, source-agnostic core that future Adapters (GitHub, CRM,
-Jira, BI, payment systems, ...) can plug into without ever touching it
-(Phases 1-5 below).
+![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
+![Tests](https://github.com/DenisHogberg/OCOM-Reader/actions/workflows/tests.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-informational.svg)
 
-Built on top of that core, this repository now also ships a working
-**OCOM Reader MVP**: a small application that indexes this repository's own
-Markdown documentation and answers questions about it — deterministically,
-with no LLM, no embeddings, and no semantic search anywhere in the pipeline.
-See [Reader MVP](#reader-mvp) below for how to use it, and
-[`docs/architecture/MILESTONE-009-010.md`](docs/architecture/MILESTONE-009-010.md)
-for the full architecture.
+OCOM Reader is a CLI (and small Web UI / library) for asking deterministic,
+rule-based questions about a repository's own Markdown documentation, and for
+reading, searching, and reviewing operational data produced by a separate project
+called **Vector**. **Reader reads Vector's data; it is a separate, independent
+project and never modifies anything Vector produces.**
 
-Per [ADR-007](docs/architecture/ADR-007-memory-before-knowledge.md), raw
-ingested records (`RawDocument` today, its counterparts for future sources
-later) are treated as Memory — persisted independently of whatever
-interpretation is built from them. That makes OCOM Reader's documentation
-adapter the first instance of a broader pattern, not a documentation-specific
-mechanism: this repository is the first component of what the architecture
-treats as an Operational Memory Platform, not only a Markdown reader.
+## Why Reader?
 
-## Architectural principles (binding for this codebase)
+Two related but distinct problems, solved without an LLM in the loop by default:
 
-- An `OCOMObject` is always source-agnostic. No source ever shapes its
-  schema, and no adapter-specific detail leaks into its structure.
-- Provenance is not incidental metadata. Where an object's data came
-  from is a first-class architectural concept — `evidence` — kept
-  structurally separate from `metadata`. `metadata` describes the
-  object; `evidence` explains where its data came from.
-- The Reader adapts to OCOM. OCOM never adapts to the Reader.
-- Adding a new source must only ever mean adding a new `Adapter` +
-  `Normalizer` pair — the core (`OCOMObject`, `Evidence`, interfaces,
-  storage) does not change.
+- A repository accumulates real architectural knowledge in its own Markdown docs, and
+  finding the right one by grep alone gets harder as it grows. Reader indexes a
+  repository's own documentation and answers questions about it deterministically —
+  the same query against an unchanged repository always produces byte-identical
+  output, with no LLM, embeddings, or semantic search required.
+- Separately, a company using **Vector** (an OCOM-based operational memory platform —
+  meetings, decisions, tasks, risks, and more, extracted from real transcripts) needs a
+  way to browse, search, and review that data without writing more code against
+  Vector's raw files directly. Reader's `vector` subcommand is that read-only client.
 
-See [`Meta/Object.md.docx`](../Meta/Object.md.docx),
-[`Core/Principles.md.docx`](../Core/Principles.md.docx),
-[`Core/Modeling-Rules.md.docx`](../Core/Modeling-Rules.md.docx), and
-[`Memory/Memory Record.md.docx`](../Memory/Memory%20Record.md.docx) /
-[`Memory/Evidence Overlay.md.docx`](../Memory/Evidence%20Overlay.md.docx)
-for the governing specification this model is derived from. `Evidence`
-here is a minimal Phase 1 placeholder reserving the right place for
-that future Evidence Overlay concept — not a full implementation of it.
+## Reader vs Vector
 
-## Structure
+These are two separate GitHub repositories with two separate purposes:
 
-```
-src/ocom_reader/
-  core/
-    object.py               OCOMObject + Relationship (pydantic models)
-    evidence.py               Evidence (pydantic model)
-  interfaces/
-    adapter.py               Adapter — fetches raw records from one source
-    normalizer.py             Normalizer — raw record -> OCOMObject (+ Evidence)
-    storage.py                 Storage — persists/retrieves OCOMObject
-  storage/local_storage.py  LocalJSONStorage — one JSON file per object
-  config.py                 Settings (env-driven)
-  logging_setup.py           Logging configuration
-  main.py                     Entry point
+| | Reader (this repository) | Vector |
+|---|---|---|
+| What it is | An open-source CLI/library — a *consumer* of data | A private, proprietary operational memory platform — a *producer* of data |
+| What it does | Reads, searches, and displays | Ingests real meeting transcripts, extracts Statements, stages them for human review |
+| Writes to Vector? | **Never.** Read-only, always. | — |
+| License | Apache-2.0 (this repository) | Proprietary, all rights reserved (Vector's own repository) |
 
-  adapters/filesystem_documentation.py
-    RawDocument                          — raw record (content, path, modified_at, metadata)
-    FilesystemDocumentationAdapter        — walks a folder, yields RawDocument for .md/.txt
+Reader talks to Vector only through a versioned, documented contract
+(`docs/vector-integration.md`) — never by assuming Vector's internal implementation
+details. A Vector repository is just a directory on disk you point Reader at; Reader
+never requires network access to it.
 
-  normalizers/filesystem_documentation_normalizer.py
-    FilesystemDocumentationNormalizer     — deterministic, non-LLM Normalizer v0.1
+## Features
 
-  indexer/      RepositoryIndexBuilder    — indexes this repo's own Markdown docs        (M006)
-  registry/     RegistryBuilder           — pointer-only knowledge graph over the index  (M007)
-  retrieval/    RetrievalEngine           — deterministic search + ranking              (M008)
-  composer/     AnswerComposer            — RetrievalResult -> ComposedAnswer            (M009-010)
-  reader.py     Reader                    — public facade over the four layers above     (M009-010)
-  cli.py, __main__.py                     — CLI: `ocom-reader` / `python -m ocom_reader` (M009-010)
-```
+- **Deterministic Q&A over a repository's own docs** — `ask`/`search`/`explain`/
+  `related`, no LLM required (an optional LLM presentation layer exists — see
+  `docs/HISTORY.md`).
+- **Vector integration** — signal-based search and browsing, object navigation
+  (Object View, cross-meeting mentions, a relationship browser, an entity timeline),
+  and a Promotion Review queue — 10 `vector` subcommands, all read-only.
+- **Multi-repository workspace** — register and switch between repositories by name
+  (`repo add`/`use`) instead of retyping paths.
+- **A plugin system** and **a small local Web UI**, both built on the same core.
 
-`indexer/` through `cli.py` are a second, independent pipeline built on top
-of the Adapter/Normalizer core — see [Reader MVP](#reader-mvp) below and
-[`docs/architecture/`](docs/architecture/) (MILESTONE-006 through
-MILESTONE-009-010) for their full design and architecture.
+## Installation
 
-`RawDocument` above is what [ADR-007](docs/architecture/ADR-007-memory-before-knowledge.md)
-formalizes as Memory — decided, not yet implemented as a persisted stage; see
-that ADR and [OCOM Knowledge Model v0.1](docs/architecture/OCOM-Knowledge-Model-v0.1.md)
-for what is built from it.
-
-## Reader MVP
-
-Ask questions about this repository's own documentation:
+Requires Python 3.9+. Not yet published to PyPI — install from a clone:
 
 ```bash
+git clone https://github.com/DenisHogberg/OCOM-Reader.git
+cd OCOM-Reader
 pip install -e .
+```
 
+## Quick Start (5 minutes)
+
+```bash
+# 1. Ask Reader about its own documentation — no external data needed.
 ocom-reader ask "identity resolution"
-ocom-reader search "registry"
-ocom-reader related docs/architecture/MILESTONE-007.md
-ocom-reader explain "identity resolution"
 
-# equivalent, no install required:
-python -m ocom_reader ask "runtime"
+# 2. Point Reader at a separate Vector repository you have on disk.
+#    (Substitute your own path — any directory containing Vector's
+#    objects/ and/or ai/staging/ trees works.)
+ocom-reader vector stats path/to/vector-repo
+
+# 3. Run your first genuinely useful Vector command: see what a human
+#    should review next, grouped by what Vector's own pipeline detected.
+ocom-reader vector review path/to/vector-repo
 ```
 
-Pipeline: `Repository -> RepositoryIndex (M006) -> KnowledgeRegistry (M007)
--> RetrievalEngine (M008) -> AnswerComposer (M009-010) -> Reader / CLI`.
-Every layer is deterministic and rule-based — no LLM, no embeddings, no
-semantic search, no vector store, anywhere in this pipeline. Same query
-against an unchanged repository always produces byte-identical output.
+That's the whole loop: install, ask Reader something about itself, then point it at
+Vector and get a real, useful answer back. Everything past this point is optional
+depth, not required to start using Reader.
 
-Programmatic use:
+## CLI Overview
 
-```python
-from pathlib import Path
-from ocom_reader.reader import Reader
+Reader has four command groups. This is a tour, not the full reference — run
+`ocom-reader <command> --help` for every flag, or see `docs/vector-integration.md` for
+the complete, versioned Vector command reference.
 
-reader = Reader(Path("."))
-answer = reader.answer("identity resolution")   # -> ComposedAnswer
-reader.search("registry")                       # -> ranked RetrievalMatch list
-reader.related("docs/architecture/MILESTONE-007.md")  # -> direct neighbors
-reader.explain("identity resolution")            # -> evidence + related, with reasons
-```
+| Command | Does |
+|---|---|
+| `ask` / `search` / `explain` / `related` | Deterministic Q&A over a repository's own Markdown docs |
+| `repo add` / `use` / `list` / `remove` | Register repositories by name, switch the active one |
+| `vector show` / `search` / `signals` / `summary` / `stats` | Read and search Vector Statements by signal |
+| `vector object` / `mentioned-in` / `relationships` / `timeline` | Navigate Vector objects and their relationships |
+| `vector review` | Group Statements by `statement_kind` for human promotion review |
+| `plugin list` / `info` / `enable` / `disable` / `reload` | Manage the plugin system |
+| `web` | Start the local Web UI (`http://127.0.0.1:8765`) |
 
-See [`docs/architecture/MILESTONE-009-010.md`](docs/architecture/MILESTONE-009-010.md)
-for the full architecture, answer format, and known limitations, and
-MILESTONE-006/007/008 for the Indexer, Registry, and Retrieval layers it's
-built on.
+Also usable as a library — `from ocom_reader.reader import Reader` — see
+`docs/HISTORY.md`'s "Programmatic use" section for a runnable example.
 
-## Adapter/Normalizer Core (Phases 1-5, historical)
+## Working with Vector
 
-The sections below document the original OCOM Adapter/Normalizer core the
-Reader MVP above is built on top of. `core/`, `interfaces/`, `storage/`,
-`adapters/`, and `normalizers/` have not changed since Phase 5.
-
-### Phase 1 scope
-
-Project structure, `OCOMObject` working model, `Evidence`, the three
-core interfaces, a local JSON `Storage`, config, logging, entry point.
-
-### Phase 2 scope
-
-The first concrete source: `FilesystemDocumentationAdapter`. It reads a
-local folder, finds `.md`/`.txt` files, and returns only raw data —
-content, path, timestamp, basic metadata (filename, extension, size).
-It has no knowledge of `OCOMObject`, does not extract entities, does
-not call an LLM, and does not normalize anything.
-
-Nothing in `core/` or `interfaces/` changed to add this source — that
-is the point of this phase.
-
-### Phase 3 scope — Normalizer v0.1, no LLM
-
-`FilesystemDocumentationNormalizer` now has a real, fully deterministic
-implementation of `normalize()`:
-
-- **identity** — a stable id hashed from the resolved file path
-  (`fsdoc:<sha256[:16]>`). It does not change when the file's content
-  changes, only when its path changes.
-- **object_type** — fixed at `"Document"`. No content interpretation.
-- **metadata** — the raw record's technical metadata (filename,
-  extension, size_bytes) plus `content_length`. Nothing about origin
-  lives here.
-- **evidence** — one `Evidence` entry per document: `source` names the
-  adapter, `reference` is the file path, `captured_at` is the file's
-  mtime, `excerpt` is the first 200 characters of content.
-
-It deliberately does **not** attempt entity extraction, business
-object recognition, or anything requiring interpretation of the
-document's meaning — that needs an LLM (or an equivalent extraction
-step) and stays out of scope until this LLM-free contract is proven.
-
-This class only implements the existing `Normalizer` interface — a
-future LLM-based Normalizer (structured output + JSON Schema
-validation + confidence scoring) can replace it as a drop-in without
-touching the interface, the Adapter, or the core.
-
-[`tests/test_full_pipeline.py`](tests/test_full_pipeline.py) proves the
-first complete pass: `Document -> Adapter -> Normalizer -> OCOMObject
--> Storage`.
-
-### Phase 4 scope — Reasoning Consistency Test v0.1
-
-[`tests/test_reasoning_consistency_v0_1.py`](tests/test_reasoning_consistency_v0_1.py)
-tests the OCOM Object idea itself, not LLM quality — no LLM is involved.
-Two documents describe the same OCOM concept in different language and
-wording, run through the existing pipeline. It documents three things:
-
-1. The deterministic Normalizer assigns identity from file path, not
-   content meaning, so the two documents get two different identities.
-   Recognizing they describe the same real object requires
-   interpreting content — that is reasoning, and this is the honest
-   boundary of a non-LLM Normalizer, not a defect.
-2. Each OCOMObject keeps its own Evidence — provenance from each
-   source survives independently, before any merging.
-3. The OCOMObject/Evidence shape does not block building a merged
-   representation once something (a future LLM-based Normalizer, or a
-   human) decides the two are the same object: it is just combining
-   evidence lists under one identity, with no change to core.
-
-This defines exactly what the next phase — an LLM-based Normalizer with
-structured output — needs to supply: the decision that two sources
-refer to the same object, nothing else.
-
-### Phase 5 scope — LLM-based Normalizer v0.1
-
-[`normalizers/llm_document_normalizer.py`](src/ocom_reader/normalizers/llm_document_normalizer.py)
-adds `LLMDocumentNormalizer`, a second implementation of the same
-`Normalizer` interface. Nothing else changed: `OCOMObject`, `Evidence`,
-`Adapter`, and `Storage` are untouched (verified — no diff on any of
-those files in this phase's commit).
-
-- **Structured output boundary** — the injected `LLMClient` returns a
-  raw dict, validated against `ExtractionResult` (pydantic) before
-  anything is built from it. Malformed output raises `ValidationError`
-  instead of silently producing a bad `OCOMObject`
-  ([`test_malformed_llm_output_is_rejected`](tests/test_llm_document_normalizer.py)).
-- **Identity from concept, not path** — identity is a slug of the
-  LLM-extracted concept name (`concept:ocom-object`), so two documents
-  about the same concept get the *same* identity regardless of file
-  path or language. This is the one thing the deterministic Normalizer
-  structurally could not do.
-- **Evidence** — still one entry per document processed, `source`/
-  `reference`/`captured_at` exactly as before; `excerpt` now comes from
-  the LLM's own supporting quote instead of a fixed character slice.
-- **Confidence** — prepared as `metadata["confidence"] = "Low"` (per
-  the OCOM Confidence Model: AI inference only, unverified, is the
-  textbook Low case). No scoring logic — just the field, as asked.
-- **LLM call is injected**, not hardcoded (`LLMClient` protocol). Tests
-  use a deterministic fake client — no network, no API key, no cost,
-  consistent with the rest of this offline test suite.
-  `AnthropicLLMClient` is the real implementation, usable once
-  `ANTHROPIC_API_KEY` is set in the environment; it was not exercised
-  live in this phase.
-
-[`tests/test_llm_normalizer_same_object_recognition.py`](tests/test_llm_normalizer_same_object_recognition.py)
-is the required first test: `object_en.md` and `object_ru.md` both
-normalize to `identity == "concept:ocom-object"`; merging is a plain
-get-then-save around the unchanged `Storage` interface; the final
-stored object carries both Evidence entries, each with its own
-`reference` and `excerpt` intact.
-
-## Running
+Every `vector` subcommand takes a path to a Vector repository (or a subdirectory of
+one, such as one Meeting's staging folder) and is read-only:
 
 ```bash
-pip install -e .
-
-# Reader MVP (M006-M010) — see "Reader MVP" above
-ocom-reader ask "runtime"
-
-# Phase 1-5 Adapter/Normalizer core smoke test
-python -m ocom_reader.main
+ocom-reader vector show path/to/STM-....md            # one Statement, full detail
+ocom-reader vector search path/to/vector-repo --signal task
+ocom-reader vector object path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector review path/to/vector-repo          # the Promotion Review queue
 ```
 
-## Testing
+Reader currently reads two things beyond what Vector's contract formally covers yet
+(`Meeting.meeting_date`, and the common object schema `VectorObject` relies on) — both
+flagged explicitly, both optional/tolerant of absence. Full guarantees, compatibility
+notes, and every command's exact output format: **`docs/vector-integration.md`**.
 
-```bash
-pip install -e . pytest
-pytest
+## Architecture Overview
+
 ```
+Repository -> RepositoryIndex -> KnowledgeRegistry -> RetrievalEngine -> AnswerComposer -> Reader / CLI
+                                                                                  ↑
+Vector repository -> vector_integration/ (loader, signals, navigation, promotion) ┘
+```
+
+Two independent pipelines share one CLI and one `Reader` facade: the original
+Adapter/Normalizer core plus the deterministic documentation-Q&A pipeline built on top
+of it, and the separate, read-only `vector_integration/` package this repository's
+recent milestones (M01-M04) added. Neither pipeline's internals leak into the other.
+
+The full historical narrative — the Adapter/Normalizer core, Phases 1-5, and the
+original architectural principles this project started from — is preserved in
+**`docs/HISTORY.md`**, not deleted, just moved out of this file so it doesn't crowd out
+getting started. Design docs for every individual milestone live in
+[`docs/architecture/`](docs/architecture/) (the original M006-M021 track) and this
+repository's root `READER_M0X.md`/`READER_M0X_DESIGN.md` files (the Vector-integration
+track, M01-M04 — a separate, restarted count; see `CHANGELOG.md`'s "Project History"
+section if the two numbering schemes are ever confusing side by side).
+
+## Current Status
+
+512 tests passing. Implemented: the Reader MVP (deterministic Q&A), extensibility
+(multi-repo workspace, plugins), a Web UI, an optional LLM layer, and the Vector
+integration (M01 Contract Compliance through M04 Promotion Review UI).
+
+**Known limitations**, checked directly against real data, not assumed: Vector's real
+`relationships` and `alias:` tags are currently unpopulated (0 of 6 real objects have
+either), so the Relationship Browser has nothing real to show yet; speaker identity is
+unresolved on Vector's side, so `speaker:` search won't match a real name yet; Vector
+has no persisted "Promotion Candidate" data, so `vector review` groups by
+`statement_kind` only, deliberately, rather than inventing a richer classification
+Reader has no contracted basis for.
+
+Full detail, including exactly which fields are contracted versus flagged exceptions:
+**`READER_STATUS.md`**.
+
+## Documentation
+
+- **`docs/vector-integration.md`** — the Vector integration's supported contract
+  version, compatibility guarantees, and every command's exact output.
+- **`docs/HISTORY.md`** — the original Adapter/Normalizer core narrative (Phases 1-5)
+  and early architecture, preserved in full.
+- **[`docs/architecture/`](docs/architecture/)** — per-milestone design docs for the
+  original Reader-core track (M006 through M021).
+- **`READER_STATUS.md`** — capabilities, contract dependencies, and limitations at a
+  glance.
+- **`READER_M01.md`** through **`READER_M04.md`**, plus **`READER_M04_DESIGN.md`** —
+  the Vector-integration milestone reports, including the design-review-before-code
+  discipline established for M04 onward.
+- **`READER_ROADMAP_REVIEW.md`**, **`READER_PRODUCT_READINESS.md`** — the analysis
+  behind why this Product Readiness sequence (License → CI → Changelog → this README)
+  happened, and in this order.
+- **`CHANGELOG.md`** — every notable change, and an explicit note on this project's two
+  overlapping milestone-numbering schemes.
+
+## Roadmap
+
+Per `READER_ROADMAP_REVIEW.md`'s own conclusion: stabilize before adding new
+analytical features. Product Readiness is in progress — License (P01) and CI (P02) and
+Changelog & Versioning (P03) are done; this README (P04) is the last item identified
+before Reader is genuinely ready for its first public release. No M05 has been
+scoped or design-reviewed yet.
+
+## License
+
+Apache License, Version 2.0 — see [`LICENSE`](LICENSE). Rationale for choosing
+Apache-2.0 over MIT/BSD-3-Clause: `READER_LICENSE_REVIEW.md`.
