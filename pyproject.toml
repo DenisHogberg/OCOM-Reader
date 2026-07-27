@@ -7,6 +7,10 @@ name = "ocom-reader"
 version = "0.1.0"
 description = "OCOM Reader — reference Adapter implementation for the OCOM architecture (Phase 1: architectural core)"
 requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+]
 dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
