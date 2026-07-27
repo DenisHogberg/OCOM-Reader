@@ -9,6 +9,7 @@ description = "OCOM Reader — reference Adapter implementation for the OCOM arc
 requires-python = ">=3.9"
 dependencies = [
     "pydantic>=2.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
