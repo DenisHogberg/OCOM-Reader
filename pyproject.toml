@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ocom-reader"
-version = "0.1.0"
+version = "0.2.0"
 description = "OCOM Reader — reference Adapter implementation for the OCOM architecture (Phase 1: architectural core)"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
