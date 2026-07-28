@@ -35,9 +35,13 @@ COPY READER_*.md ./docroot/
 COPY docs/ ./docroot/docs/
 
 # .ocom/ is Reader's own regenerable index cache for docroot/ — writable by
-# the non-root user, not by anyone else.
+# the non-root user, not by anyone else. Declared as a volume so a named volume
+# can be mounted here in production: the cache survives container
+# recreation, but nothing about it is source data — deleting it just costs one
+# re-index on next start, from the docroot/ content already baked into the image.
 RUN mkdir -p ./docroot/.ocom \
     && chown -R ocom:ocom /app
+VOLUME ["/app/docroot/.ocom"]
 
 USER ocom
 
@@ -45,5 +49,12 @@ EXPOSE 8765
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=2)" || exit 1
+
+# Reader's web command has no SIGTERM handler (confirmed: docker stop with the
+# default STOPSIGNAL took the full grace period and ended in SIGKILL). It does
+# catch KeyboardInterrupt (SIGINT) and closes the server cleanly in a `finally`
+# block — so `docker stop` is told to send SIGINT instead. This is a container
+# runtime setting only; no line of Reader's own source was changed.
+STOPSIGNAL SIGINT
 
 ENTRYPOINT ["ocom-reader", "--repo", "/app/docroot", "web", "--host", "0.0.0.0", "--port", "8765"]
