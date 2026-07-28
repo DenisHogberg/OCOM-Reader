@@ -159,8 +159,8 @@ Full detail, including exactly which fields are contracted versus flagged except
 
 ## Production
 
-A `Dockerfile` builds a production image of the Web UI (`ocom-reader web --host 0.0.0.0
---port 8765`), independent of any Vector repository:
+A `Dockerfile` builds a production image of the Web UI (`ocom-reader --repo /app/docroot
+web --host 0.0.0.0 --port 8765`), independent of any Vector repository:
 
 ```bash
 docker build -t ocom-reader:local .
