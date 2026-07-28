@@ -88,8 +88,13 @@ def linked_meeting_ids(statements: list[VectorStatement]) -> list[str]:
     return ids
 
 
-def render_object_view(obj: VectorObject, statements: list[VectorStatement]) -> str:
-    """M03 Task 1 — the Object View block."""
+def render_object_view(
+    obj: VectorObject, statements: list[VectorStatement], objects: list[VectorObject]
+) -> str:
+    """M03 Task 1 — the Object View block. `objects` (Reader M05 — Evidence view)
+    is every loaded object from the same root, used only to resolve `obj.evidence`
+    ids to their Evidence objects — the exact same by-id resolution `mentions()`
+    already uses for `references`, not a new pattern."""
     linked = linked_statements(obj.id, statements)
     meeting_ids = linked_meeting_ids(linked)
     lines = [
@@ -106,6 +111,15 @@ def render_object_view(obj: VectorObject, statements: list[VectorStatement]) -> 
     if obj.relationships:
         lines.extend(
             f"{rel.get('type', '?')} → {rel.get('target', '?')}" for rel in obj.relationships
+        )
+    else:
+        lines.append("(none)")
+    lines += ["", "Evidence:"]
+    by_id = {o.id: o for o in objects}
+    resolved_evidence = [by_id[eid] for eid in obj.evidence if eid in by_id]
+    if resolved_evidence:
+        lines.extend(
+            f"{e.source_type or '(source type unknown)'} — {e.id}" for e in resolved_evidence
         )
     else:
         lines.append("(none)")

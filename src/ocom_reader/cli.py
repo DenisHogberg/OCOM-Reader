@@ -381,7 +381,7 @@ def _run_vector_command(args: argparse.Namespace) -> int:
             return 1
         meetings = load_meetings(args.root)
         statements = filter_to_current_meetings(load_statements(args.root), meetings)
-        print(render_object_view(obj, statements))
+        print(render_object_view(obj, statements, objects))
         return 0
 
     if args.vector_command == "mentioned-in":

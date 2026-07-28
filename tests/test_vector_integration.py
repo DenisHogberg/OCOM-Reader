@@ -481,7 +481,10 @@ def test_combined_query_against_real_data() -> None:
 # View/Timeline (which DO have real reference data behind them) are also
 # checked against Vector's actual ai/staging/MTG-20260727-XMFL.
 
-def _obj(id_, type_="partner", title="T", relationships=(), references=(), tags=()) -> VectorObject:
+def _obj(
+    id_, type_="partner", title="T", relationships=(), references=(), tags=(),
+    evidence=(), source_type=None,
+) -> VectorObject:
     return VectorObject.model_validate(
         {
             "id": id_, "type": type_, "title": title, "tenant": "x", "owner": "o",
@@ -489,6 +492,8 @@ def _obj(id_, type_="partner", title="T", relationships=(), references=(), tags=
             "relationships": list(relationships),
             "references": list(references),
             "tags": list(tags),
+            "evidence": list(evidence),
+            "source_type": source_type,
         }
     )
 
@@ -523,7 +528,7 @@ def test_render_object_view_with_aliases_and_relationships() -> None:
         _stmt("1", meeting_ref="MTG-A", references=[{"target": "PTN-1"}]),
         _stmt("2", meeting_ref="MTG-B", references=[{"target": "PTN-1"}]),
     ]
-    rendered = render_object_view(obj, stmts)
+    rendered = render_object_view(obj, stmts, [obj])
     assert "Type:\npartner" in rendered
     assert "Name:\nAngelina" in rendered
     assert "Linked Statements:\n2" in rendered
@@ -534,11 +539,40 @@ def test_render_object_view_with_aliases_and_relationships() -> None:
 
 def test_render_object_view_with_no_aliases_or_relationships() -> None:
     obj = _obj("PTN-2", title="Nobody")
-    rendered = render_object_view(obj, [])
+    rendered = render_object_view(obj, [], [obj])
     assert "Linked Statements:\n0" in rendered
     assert "Meetings:\n0" in rendered
     assert "Aliases:\n(none)" in rendered
     assert "Relationships:\n(none)" in rendered
+    assert "Evidence:\n(none)" in rendered
+
+
+def test_render_object_view_with_evidence() -> None:
+    """Reader M05 — Evidence view (Phase 3.1 PR-5, Option A: frontmatter-only,
+    no Markdown body/excerpt parsing). Resolves obj.evidence ids against the
+    objects list the exact same way mentions() resolves references — no new
+    resolution mechanism."""
+    evd = _obj("EVD-1", type_="evidence", title="Some excerpt", source_type="human_verification")
+    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-1"])
+    rendered = render_object_view(obj, [], [obj, evd])
+    assert "Evidence:\nhuman_verification — EVD-1" in rendered
+
+
+def test_render_object_view_evidence_id_unresolved_is_skipped() -> None:
+    """An evidence id not present among the loaded objects is skipped, not an
+    error — same tolerance policy as mentions()'s unresolved references."""
+    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-GHOST"])
+    rendered = render_object_view(obj, [], [obj])
+    assert "Evidence:\n(none)" in rendered
+
+
+def test_render_object_view_evidence_missing_source_type() -> None:
+    """An Evidence object loaded without source_type (e.g. malformed data)
+    renders an explicit placeholder rather than a blank or a crash."""
+    evd = _obj("EVD-1", type_="evidence", title="Some excerpt")
+    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-1"])
+    rendered = render_object_view(obj, [], [obj, evd])
+    assert "Evidence:\n(source type unknown) — EVD-1" in rendered
 
 
 def test_mentions_resolves_statement_references_to_objects() -> None:
@@ -676,9 +710,14 @@ def test_real_object_view_for_partner_angelina() -> None:
     assert linked_meeting_ids(linked) == ["MTG-20260727-XMFL"]
     # Real object: no relationships/aliases populated yet — an honest gap,
     # not a bug in this rendering.
-    rendered = render_object_view(obj, statements)
+    rendered = render_object_view(obj, statements, objects)
     assert "Aliases:\n(none)" in rendered
     assert "Relationships:\n(none)" in rendered
+    # Phase 3.1 PR-2 populated real evidence: [EVD-20260728-6HFR] on this
+    # object, with source_type: human_verification — confirmed directly
+    # against objects/evidence/EVD-20260728-6HFR--angelina-owed-payment.md
+    # before writing this assertion, not assumed.
+    assert "Evidence:\nhuman_verification — EVD-20260728-6HFR" in rendered
 
 
 @pytestmark_real_vector

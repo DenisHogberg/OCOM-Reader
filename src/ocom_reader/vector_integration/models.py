@@ -171,6 +171,12 @@ class VectorObject(BaseModel):
     references: list[dict[str, Any]] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+    # Only meaningful when type == "evidence" (Vector's schemas/evidence.schema.json
+    # required field) — absent/None on every other type. Frontmatter-only, same as
+    # everything else on this model: Vector's Evidence "## Excerpt" Markdown body
+    # content is deliberately NOT read here — that's a separate, later decision
+    # (see PR-5 pre-flight discussion), not an oversight.
+    source_type: Optional[str] = None
 
     def aliases(self) -> list[str]:
         """Registered aliases via the `alias:<form>` tags convention — the
