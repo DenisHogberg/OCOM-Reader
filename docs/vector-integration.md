@@ -100,10 +100,21 @@ new fields beyond that.
   every future milestone, not a one-off decision scoped to M04.
 - **Object Navigation (M03) has no real `relationships` or `alias:` tags to show yet.**
   Checked directly against Vector's real data: all 6 real Partner/Employee objects have
-  empty `relationships`, `references`, `evidence`, and no `alias:` tags. Object View's
+  empty `relationships`, `references`, and no `alias:` tags. Object View's
   Aliases/Relationships sections and the Relationship Browser are correct and tested
   (against synthetic fixtures), but have nothing to display against real data today —
-  an honest gap in the data, not in the Reader-side implementation.
+  an honest gap in the data, not in the Reader-side implementation. `evidence` is the
+  exception: Vector's Phase 3.1 (PR-2) populated real `evidence:` references on all 6,
+  which Object View's Evidence section (Reader M05) does display against real data —
+  see below.
+- **Object View's Evidence section (Reader M05) is frontmatter-only — it does not read
+  or render the Evidence object's Markdown body.** It shows `source_type` and the
+  Evidence object's id for each resolved `evidence:` entry, resolved the same way
+  Reverse Navigation resolves `references` — nothing new. It deliberately does **not**
+  parse the `## Excerpt` section of an Evidence object's body; that would require the
+  loader to read Markdown bodies at all, which it doesn't do anywhere today, and was
+  scoped out of this milestone as a separate, later architectural decision if the
+  excerpt text turns out to be worth showing.
 - **Entity Timeline is a timeline of mentions, not of field-level changes.** Reader reads
   one current snapshot of each object file, not Vector's git history, so it has no way to
   know what an object's fields looked like at an earlier point in time. "Mentioned in a
@@ -146,7 +157,8 @@ ocom-reader vector search path/to/vector-repo/ai/staging "signal:task speaker:De
 # Global statistics across every Meeting/Statement under a path.
 ocom-reader vector stats path/to/vector-repo/ai/staging
 
-# Object View — type, name, linked Statement/Meeting counts, aliases, relationships.
+# Object View — type, name, linked Statement/Meeting counts, aliases, relationships,
+# evidence (source_type + id per resolved entry — frontmatter only, no excerpt text).
 ocom-reader vector object path/to/vector-repo PTN-20260727-A1NG
 
 # Reverse Navigation — add --root to `show` to also print the Mentions block
