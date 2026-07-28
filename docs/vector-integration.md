@@ -9,40 +9,42 @@ Implementation lives in `src/ocom_reader/vector_integration/`; tests in
 
 ## Supported contract version
 
-**Contract Version 1.0** (Vector `PARSER_VERSION 1.4.0`). Reader tracks this version
+**Contract Version 1.1** (Vector `PARSER_VERSION 1.4.0`). Reader tracks this version
 explicitly in this document, not in code — there is no runtime version negotiation; if
 Vector publishes a Contract Version 2.0 with breaking changes, this document (and
 `vector_integration/models.py`) need a corresponding update, not an automatic adaptation.
 
-**Reader M03 (Object Navigation) reads beyond Contract v1.0's stated scope.** The
-contract governs only Statement fields (plus two Meeting fields for the supersedes
-chain). M03 needed two things it does not cover, and both are called out explicitly
-rather than silently assumed stable:
+**Reader M03 (Object Navigation) reads fields Contract v1.1 now formally covers.**
+Contract v1.0 governed Statement only; M03 needed two things it didn't cover at the
+time, called out explicitly as a "beyond contract" exception rather than silently
+assumed stable. Both are now formally part of the contract as of v1.1 — nothing about
+Reader's own code changed to make this true, since both fields already behaved exactly
+as documented; this is Vector's contract catching up to already-verified reality:
 
-- **`VectorObject`** (`vector_integration/models.py`) — Vector's *common* object
-  frontmatter (id/type/title/tenant/owner/status/lifecycle/confidence/source/
-  relationships/references/evidence/tags), shared by Partner/Company/Employee/Task/
-  Decision/Risk/Issue/Document/Project/Product/Evidence per Vector's own
-  `docs/object-model.md`. No contract for this shape exists yet — only Vector's own
-  (non-versioned) internal documentation. **Recommendation for Vector**: publish a
-  second contract (or a v1.1 addendum to this one) covering the common object schema,
-  the same way Statement's fields are covered today.
-- **`Meeting.meeting_date`** — an optional field Entity Timeline needs for chronological
-  sorting; no Statement-level field the contract already covers substitutes for it
-  (`Statement.created` is Reader's ingestion date, not the meeting's date;
-  `Statement.timestamp` is only an offset within the recording). Read, but not
-  contractually guaranteed — Vector should confirm this as a deliberate, documented
-  addition or tell Reader to source the date another way.
+- **`VectorObject`** (`vector_integration/models.py`) — the 13-field common object
+  subset (`id`/`type`/`title`/`tenant`/`owner`/`status`/`lifecycle`/`confidence`/
+  `source`/`relationships`/`references`/`evidence`/`tags`) shared by Partner/Company/
+  Employee/Task/Decision/Risk/Issue/Document/Project/Product/Evidence, now the
+  "Common Object Schema" section of `vector-reader-contract.md`. Note this is
+  deliberately the subset Reader actually reads, not Vector's full common schema —
+  `domain`/`language`/`created`/`updated` remain outside the contract, since
+  `VectorObject` doesn't model any of them today.
+- **`Meeting.meeting_date`** — an optional field Entity Timeline needs for
+  chronological sorting; no Statement-level field the contract already covers
+  substitutes for it (`Statement.created` is Reader's ingestion date, not the
+  meeting's date; `Statement.timestamp` is only an offset within the recording). Now
+  part of the contract's "Meeting" section, alongside `parser_version` and the
+  `supersedes` relationship (which M03 already depended on before v1.1, via
+  Statement's own guarantees).
 
-Both are optional/tolerant of absence — a Vector object or Meeting missing them still
-loads and renders (Aliases/Relationships as "(none)"; Timeline entries as
+Both remain optional/tolerant of absence — a Vector object or Meeting missing them
+still loads and renders (Aliases/Relationships as "(none)"; Timeline entries as
 "(date unknown)"), never an error.
 
 **Reader M04 (Promotion Review UI) reuses `Meeting.meeting_date`, introduces nothing
 new.** Promotion Review orders each `statement_kind` group's Statements by Meeting (date
-order, undated last), which depends on the same beyond-contract `meeting_date` field M03
-introduced — a second consumer of an existing exception, not a new one. M04 adds zero
-new fields beyond that.
+order, undated last), which depends on the same `meeting_date` field M03 introduced —
+now contracted, not an exception. M04 adds zero new fields beyond that.
 
 ## Compatibility
 

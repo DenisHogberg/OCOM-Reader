@@ -645,9 +645,9 @@ def test_render_relationship_tree_skips_unresolvable_target() -> None:
 
 
 def test_render_entity_timeline_sorts_by_meeting_date() -> None:
-    """Task 5 — Entity Timeline. meeting_date is a Reader M03 addition beyond
-    Contract v1.0 (see models.VectorMeeting docstring); undated meetings sort
-    last rather than being dropped."""
+    """Task 5 — Entity Timeline. meeting_date is a Reader M03 addition, now
+    part of Contract v1.1's "Meeting" section (see models.VectorMeeting
+    docstring); undated meetings sort last rather than being dropped."""
     obj = _obj("PTN-1", title="Angelina")
     stmts = [
         _stmt("1", meeting_ref="MTG-LATE", references=[{"target": "PTN-1"}]),

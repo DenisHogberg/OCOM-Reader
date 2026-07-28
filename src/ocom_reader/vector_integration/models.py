@@ -1,5 +1,5 @@
 """Vector Statement/Meeting models — Reader's side of
-docs/contracts/vector-reader-contract.md (Vector repository, Contract Version 1.0).
+docs/contracts/vector-reader-contract.md (Vector repository, Contract Version 1.1).
 
 Only the fields the contract actually governs are modeled here. `extra="ignore"`
 on both models is the concrete implementation of the contract's "Reader must
@@ -90,23 +90,23 @@ class VectorStatement(BaseModel):
 
 class VectorMeeting(BaseModel):
     """The subset of a Vector Meeting object this contract governs directly —
-    per the contract's "What this contract deliberately does not cover" section,
-    only identity plus the two fields Reader needs to resolve Vector's M03
-    idempotent-import / supersedes chain. Everything else about Meeting
-    (attendees, meeting_type, ...) is out of scope for Contract v1.0 and
-    intentionally not modeled here.
+    per Contract v1.1's "Meeting" section: identity, parser_version, the
+    supersedes relationship, and meeting_date. Everything else about Meeting
+    (attendees, meeting_type, location, duration_minutes, recording_uri,
+    source_hash beyond the id itself) remains out of scope per that section's
+    own "What this section does not cover" and intentionally not modeled here.
 
-    EXCEPTION, added for Reader M03 (Object Navigation): `meeting_date`.
-    Entity Timeline (Task 5) genuinely needs a real calendar date to sort
-    mentions chronologically, and no Statement-level field the contract
-    already covers can substitute for it (Statement.created is Reader's own
+    `meeting_date`, added for Reader M03 (Object Navigation): Entity Timeline
+    (Task 5) genuinely needs a real calendar date to sort mentions
+    chronologically, and no Statement-level field the contract already
+    covers can substitute for it (Statement.created is Reader's own
     ingestion date, not the meeting's date; Statement.timestamp is only an
-    offset within the recording). This field is READ but is NOT part of
-    Contract v1.0 — see docs/vector-integration.md and READER_M03.md for the
-    explicit flag that Vector should either confirm this as a deliberate,
-    documented v1.1 addition or tell Reader to get the date some other way.
-    Optional, defaults to None, so a Meeting lacking it (as none currently do,
-    but none of this was promised either) never breaks anything."""
+    offset within the recording). Originally read ahead of any contract
+    covering it (flagged as a "beyond Contract v1.0" exception at the time);
+    formally part of the contract as of v1.1 — see
+    docs/contracts/vector-reader-contract.md's "Meeting" section and
+    docs/vector-integration.md. Optional, defaults to None, so a Meeting
+    lacking it never breaks anything."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -116,7 +116,7 @@ class VectorMeeting(BaseModel):
     relationships: list[dict[str, Any]] = Field(default_factory=list)
     source_hash: Optional[str] = None
     parser_version: Optional[str] = None
-    meeting_date: Optional[str] = None  # M03 — beyond Contract v1.0, see docstring above
+    meeting_date: Optional[str] = None  # M03 — Contract v1.1, "Meeting" section
 
     def supersedes(self) -> list[str]:
         """Meeting ids this Meeting explicitly replaces, per its own
@@ -143,18 +143,20 @@ KNOWN_OBJECT_TYPES = frozenset(
 class VectorObject(BaseModel):
     """Any non-Statement/Meeting Vector object (Partner, Company, Employee,
     Task, Decision, Risk, Issue, Document, Project, Product, Evidence) — for
-    Reader M03's Object Navigation. Models only Vector's COMMON object
-    frontmatter (Vector's docs/object-model.md), the same baseline every
-    Vector object type shares, since no type-specific contract for any of
+    Reader M03's Object Navigation. Models Vector's COMMON object frontmatter
+    (Vector's docs/object-model.md) — specifically the 13-field subset Reader
+    actually reads, no more — since no type-specific contract for any of
     these (a "Partner contract," an "Employee contract") exists yet.
 
-    NOT covered by vector-reader-contract.md v1.0 at all — that contract is
-    Statement-only. Reader depends here on Vector's common object model being
-    stable, which is documented in Vector's own repo but not yet published as
-    a versioned contract the way Statement's fields are. Flagged explicitly
-    in READER_M03.md as a real gap: Vector should consider publishing a
-    second contract (or extending vector-reader-contract.md) covering this
-    common object shape, the same way it did for Statement."""
+    Covered by vector-reader-contract.md's "Common Object Schema" section as
+    of Contract v1.1 — originally flagged (READER_M03.md) as a real gap when
+    only Contract v1.0 (Statement-only) existed; formalized once Vector
+    published the addendum. Deliberately still narrower than Vector's full
+    common schema: `domain`/`language`/`created`/`updated` are real fields on
+    every Vector object but are not modeled here and not part of the
+    contract, because Object Navigation has never needed them — adding any
+    would be a new, separate contract change when that becomes true, not
+    implied by this class already existing."""
 
     model_config = ConfigDict(extra="ignore")
 
