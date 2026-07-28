@@ -39,6 +39,34 @@ intentional, not a placeholder: a publicly reachable Reader instance must only e
 show non-corporate example content, and the web UI has no Vector integration to
 accidentally expose in the first place.
 
+## Persistent cache (optional but recommended)
+
+`/app/docroot/.ocom` is declared as a Docker volume. Mounting a named volume there
+lets the index survive container recreation instead of rebuilding from the ~60
+Markdown files baked into the image every start — cheap either way, but
+unnecessary work avoided is unnecessary work avoided:
+
+```bash
+docker volume create reader-ocom-cache
+docker run -d -v reader-ocom-cache:/app/docroot/.ocom -p 18765:8765 ocom-reader:0.2.0
+```
+
+Verified: ownership (`ocom:ocom`) is preserved into a fresh named volume, the cache
+populates on first query, and a container recreated against the same volume reuses
+it unchanged (same file mtimes, no rebuild). Losing the volume costs one re-index,
+never data — nothing in it is source content.
+
+## Shutdown behavior
+
+`docker stop` uses `STOPSIGNAL SIGINT` (set in the `Dockerfile`), not the Docker
+default of `SIGTERM`. Reader's `web` command has no `SIGTERM` handler — confirmed:
+with the default signal, `docker stop` ran the full 10s grace period and force-killed
+the process (`ExitCode 137`). It does catch `KeyboardInterrupt` (raised by `SIGINT`)
+and closes the server cleanly in a `finally` block, so redirecting `docker stop` to
+send `SIGINT` gets a clean, fast exit (~0.14s, `ExitCode 0`) without changing a line
+of Reader's own source. No explicit in-flight-request draining exists beyond that —
+acceptable for a stateless, read-only service, worth knowing rather than assuming.
+
 ## Environment variables
 
 None required. `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` are read only by the optional LLM
