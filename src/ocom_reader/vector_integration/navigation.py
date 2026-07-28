@@ -209,9 +209,9 @@ def render_entity_timeline(
     obj: VectorObject, statements: list[VectorStatement], meetings: list[VectorMeeting]
 ) -> str:
     """M03 Task 5 (Entity Timeline) — mentions grouped by Meeting, sorted by
-    Meeting.meeting_date (see models.VectorMeeting's docstring: this field is
-    a deliberate exception to Contract v1.0's stated scope, flagged, not
-    silently assumed stable).
+    Meeting.meeting_date (see models.VectorMeeting's docstring: part of
+    Contract v1.1's "Meeting" section, originally read ahead of any contract
+    covering it, formalized once Vector published the addendum).
 
     This is a timeline of MENTIONS, not of field-level CHANGES to the object
     itself — Reader reads a single current snapshot of each object file, not
