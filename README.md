@@ -157,6 +157,38 @@ Reader has no contracted basis for.
 Full detail, including exactly which fields are contracted versus flagged exceptions:
 **`READER_STATUS.md`**.
 
+## Production
+
+A `Dockerfile` builds a production image of the Web UI (`ocom-reader web --host 0.0.0.0
+--port 8765`), independent of any Vector repository:
+
+```bash
+docker build -t ocom-reader:local .
+docker run --rm -p 8765:8765 ocom-reader:local
+curl http://localhost:8765/api/health
+```
+
+Or via the included example compose file: `docker compose -f docker-compose.example.yml
+up --build`.
+
+**What the container serves**: this repository's own documentation (`README.md`,
+`CHANGELOG.md`, the `READER_*.md` reports, and `docs/`) — baked into the image at
+`/app/docroot`, indexed by Reader itself. No Vector repository is mounted or
+referenced; the web UI has no Vector wiring today, so this is also the only content it
+is capable of serving. This is a deliberate choice, not a placeholder: a public
+deployment of Reader must only ever show non-corporate example content.
+
+**No environment variables are required.** `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` are
+read only by the optional LLM Normalizer, a code path the web UI never calls.
+
+**Health check**: `GET /api/health` → `{"status": "ok", "reader_version": "0.2.0"}`,
+wired into the image's `HEALTHCHECK` and suitable for an external load balancer /
+reverse proxy health probe.
+
+This repository does not deploy itself anywhere — see the `OCOM-Infrastructure`
+repository for the actual production Traefik/Docker Compose stack this image plugs
+into.
+
 ## Documentation
 
 - **`docs/vector-integration.md`** — the Vector integration's supported contract

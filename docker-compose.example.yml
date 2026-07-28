@@ -1,0 +1,19 @@
+# Example only — shows how to run the production image standalone for local
+# testing. The real production deployment lives in the OCOM-Infrastructure
+# repository's docker-compose.yml (Traefik + network + TLS), not here — this
+# file is intentionally not wired into that stack, to avoid two sources of
+# truth for the same deployment.
+#
+# Try it:
+#   docker compose -f docker-compose.example.yml up --build
+#   curl http://localhost:8765/api/health
+
+services:
+  reader:
+    build: .
+    image: ocom-reader:local
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    # No environment variables are required — see the "Production" section of
+    # README.md for why, and what the container's fixed --repo target is.
