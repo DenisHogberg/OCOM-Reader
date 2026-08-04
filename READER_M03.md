@@ -59,9 +59,9 @@ multiple times as its pipeline improves — same `source_hash`, different
 sitting side by side in `ai/staging/`. Running `vector object` against Vector's real
 *repository root* (not a single meeting's staging directory, which is what M01/M02's
 tests and the earlier drafts of this milestone's own tests used) surfaced this directly:
-Angelina's (`PTN-20260727-A1NG`) Linked Statements showed **12** and Meetings showed
+Jordan's (`PTN-00000000-DEMO`) Linked Statements showed **12** and Meetings showed
 **6** — a 6x overcount, one for each reindex run of the same real meeting
-(`MTG-20260727-XMFL`'s own supersedes chain, confirmed via
+(`MTG-00000000-DEMO`'s own supersedes chain, confirmed via
 `test_find_current_meetings_against_real_supersedes_chain` in M01). The correct, real
 numbers (confirmed independently via `grep` before writing any code) are **2** Statements
 in **1** meeting.
@@ -107,9 +107,9 @@ Statement's fields are covered today.
 ## An honest limitation: no real relationships or aliases to validate against
 
 Checked directly (not assumed): all 6 real Vector objects
-(`PTN-20260727-A1NG--angelina.md`, `PTN-20260727-BNDR--bondarenko.md`,
-`PTN-20260727-NVDM--nevidomyi.md`, `PTN-20260727-O1EN--olena.md`,
-`EMP-20260727-D3NS--denys.md`, `EMP-20260727-O1EG--oleh.md`) have empty `relationships`,
+(`PTN-00000000-DEMO--angelina.md`, `PTN-00000000-DEM2--bondarenko.md`,
+`PTN-00000000-DEM3--nevidomyi.md`, `PTN-00000000-DEM4--olena.md`,
+`EMP-00000000-DEMO--denys.md`, `EMP-00000000-DEM2--oleh.md`) have empty `relationships`,
 `references`, `evidence`, and no `alias:` tags. This means:
 
 - **Object View's Aliases/Relationships sections** render correctly (`(none)`) against
@@ -123,7 +123,7 @@ Checked directly (not assumed): all 6 real Vector objects
 By contrast, **Linked Statements, Mentions, Cross-Meeting View, and Entity Timeline** all
 have real data behind them — Vector's real `references` do point from Statements to
 Partner/Employee objects — and are tested against Vector's actual
-`ai/staging/MTG-20260727-XMFL` in addition to synthetic fixtures.
+`ai/staging/MTG-00000000-DEMO` in addition to synthetic fixtures.
 
 ## Post-review refactor (same day, before M04)
 
@@ -148,7 +148,7 @@ behavior change):
   match.
 
 Verified before and after with an instrumented real-data run
-(`~/Downloads/Vector`, `PTN-20260727-A1NG`): `linked_statements` calls inside
+(`~/Downloads/Vector`, `PTN-00000000-DEMO`): `linked_statements` calls inside
 `render_object_view` dropped from 2 to 1, output unchanged (2 Linked Statements, 1
 Meeting). Full suite re-run: **499 passed**, unchanged.
 
@@ -163,15 +163,15 @@ back-reference then stops, rather than silently truncating), and an unresolvable
 case; Entity Timeline's date-sort (including an undated meeting sorting last, never
 dropped); `filter_to_current_meetings` collapsing a synthetic supersedes chain.
 
-**Real data**: Object View for the real `PTN-20260727-A1NG` (2 Statements, 1 Meeting,
+**Real data**: Object View for the real `PTN-00000000-DEMO` (2 Statements, 1 Meeting,
 confirmed via direct `grep` before writing the test); Cross-Meeting View for the real
-`EMP-20260727-O1EG` (5 Statements, 1 Meeting); reverse navigation from a real Statement
-known to reference `PTN-20260727-A1NG`; Entity Timeline using the real
-`meeting_date: '2026-07-27'` on `MTG-20260727-XMFL`; and the reindex-collapsing fix
+`EMP-00000000-DEM2` (5 Statements, 1 Meeting); reverse navigation from a real Statement
+known to reference `PTN-00000000-DEMO`; Entity Timeline using the real
+`meeting_date: '2026-07-27'` on `MTG-00000000-DEMO`; and the reindex-collapsing fix
 itself, reproduced against the real, full `ai/staging/` tree.
 
 **Manual CLI smoke tests**, real data: `vector object`, `vector mentioned-in`,
-`vector relationships`, `vector timeline` against `PTN-20260727-A1NG` under the full
+`vector relationships`, `vector timeline` against `PTN-00000000-DEMO` under the full
 `~/Downloads/Vector` root (this is what surfaced the reindex-overcounting bug above,
 before the fix and after); `vector show --root` printing a correct Mentions block; a
 nonexistent object id producing a clean `Error: ...` on stderr with exit code 1, not a

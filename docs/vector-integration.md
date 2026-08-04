@@ -128,7 +128,7 @@ now contracted, not an exception. M04 adds zero new fields beyond that.
   Meeting objects with the same title sitting side by side in `ai/staging/`. Without
   correcting for this, an object's Linked Statements/Meetings/Cross-Meeting View/Timeline
   would over-count by however many times that meeting was reprocessed — discovered by
-  actually running these commands against Vector's real repository root (Angelina showed
+  actually running these commands against Vector's real repository root (Jordan showed
   up "mentioned in" the same meeting title 6 times before this fix). `object`,
   `mentioned-in`, and `timeline` all filter Statements down to only those belonging to a
   non-superseded ("current") Meeting first, via the same `find_current_meetings()`/
@@ -141,13 +141,13 @@ now contracted, not an exception. M04 adds zero new fields beyond that.
 
 ```bash
 # Full Signal View for one Statement — Speaker, Kind, Detected Signals, Text.
-ocom-reader vector show path/to/STM-20260727-2GQ5--statement.md
+ocom-reader vector show path/to/STM-00000000-DEMO--statement.md
 
 # Meeting Summary — signal counts + multi-/zero-signal rates for one Meeting.
-ocom-reader vector summary path/to/vector-repo/ai/staging/MTG-20260727-XMFL
+ocom-reader vector summary path/to/vector-repo/ai/staging/MTG-00000000-DEMO
 
 # Signal Browser — every Statement grouped by signal (all five groups always shown).
-ocom-reader vector signals path/to/vector-repo/ai/staging/MTG-20260727-XMFL
+ocom-reader vector signals path/to/vector-repo/ai/staging/MTG-00000000-DEMO
 
 # Search — M01-compatible single-signal shorthand:
 ocom-reader vector search path/to/vector-repo/ai/staging --signal task
@@ -161,20 +161,20 @@ ocom-reader vector stats path/to/vector-repo/ai/staging
 
 # Object View — type, name, linked Statement/Meeting counts, aliases, relationships,
 # evidence (source_type + id per resolved entry — frontmatter only, no excerpt text).
-ocom-reader vector object path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector object path/to/vector-repo PTN-00000000-DEMO
 
 # Reverse Navigation — add --root to `show` to also print the Mentions block
 # (the objects this Statement's `references` resolve to).
 ocom-reader vector show path/to/STM-....md --root path/to/vector-repo
 
 # Cross-Meeting View — every (non-superseded) Meeting this object is mentioned in.
-ocom-reader vector mentioned-in path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector mentioned-in path/to/vector-repo PTN-00000000-DEMO
 
 # Relationship Browser — a plain text tree walk of this object's typed relationships.
-ocom-reader vector relationships path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector relationships path/to/vector-repo PTN-00000000-DEMO
 
 # Entity Timeline — mentions grouped by Meeting, sorted by meeting_date.
-ocom-reader vector timeline path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector timeline path/to/vector-repo PTN-00000000-DEMO
 
 # Promotion Review — every Statement grouped by statement_kind (all seven
 # groups always shown), sub-sectioned by Meeting (date order), then by

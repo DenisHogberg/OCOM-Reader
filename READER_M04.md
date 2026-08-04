@@ -93,7 +93,7 @@ deterministic-tie-break case above; a malformed `timestamp` renders without rais
 unknown `statement_kind` value is appended after the seven known groups, not interleaved.
 
 **Real data**, against `~/Downloads/Vector` directly:
-- `task_signal` count for `MTG-20260727-XMFL` — **7**, matching the same number
+- `task_signal` count for `MTG-00000000-DEMO` — **7**, matching the same number
   independently confirmed in `READER_M02.md`, `M06_RESULTS.md`, and
   `READER_M04_DESIGN.md`.
 - Full `ai/staging/` tree, filtered through `filter_to_current_meetings` first: this
@@ -105,11 +105,11 @@ unknown `statement_kind` value is appended after the seven known groups, not int
 failures.
 
 **Manual CLI smoke test, real data** (Standing Principle #4 — required, not optional):
-- `vector review ai/staging/MTG-20260727-XMFL` — `TASK (7)`, matches the known number.
+- `vector review ai/staging/MTG-00000000-DEMO` — `TASK (7)`, matches the known number.
 - `vector review ~/Downloads/Vector` (whole repo root) — group counts sum to **414**,
   exactly the real current-meeting Statement total (verified independently via a
   separate script call, not just trusted from the rendered output); 5 real current
-  meetings; `MTG-20260727-XMFL`'s title appears exactly 5 times total (once per group
+  meetings; `MTG-00000000-DEMO`'s title appears exactly 5 times total (once per group
   it belongs to), not 30 times (5 groups × its 6-run reindex chain) — confirming the
   required `filter_to_current_meetings` step is doing its job at real scale, not just
   in the single-meeting-directory case.

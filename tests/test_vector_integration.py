@@ -402,7 +402,7 @@ def test_query_parse_and_apply_combines_filters() -> None:
     with single-token speaker values instead."""
     stmts = [
         _stmt("1", ["task"], speaker="Denis", meeting_ref="MTG-AAA"),
-        _stmt("2", ["task"], speaker="Angelina", meeting_ref="MTG-AAA"),
+        _stmt("2", ["task"], speaker="Jordan", meeting_ref="MTG-AAA"),
         _stmt("3", ["risk"], speaker="Denis", meeting_ref="MTG-AAA"),
     ]
     assert parse_query("signal:task speaker:Denis") == {"signal": "task", "speaker": "Denis"}
@@ -520,7 +520,7 @@ def test_render_object_view_with_aliases_and_relationships() -> None:
     """Task 1 — Object View. Uses a synthetic fixture for Aliases/
     Relationships since no real Vector object has either populated yet."""
     obj = _obj(
-        "PTN-1", title="Angelina",
+        "PTN-1", title="Jordan",
         relationships=[{"type": "works_with", "target": "CMP-1"}],
         tags=["alias:Ангеліна", "alias:Angie"],
     )
@@ -530,7 +530,7 @@ def test_render_object_view_with_aliases_and_relationships() -> None:
     ]
     rendered = render_object_view(obj, stmts, [obj])
     assert "Type:\npartner" in rendered
-    assert "Name:\nAngelina" in rendered
+    assert "Name:\nJordan" in rendered
     assert "Linked Statements:\n2" in rendered
     assert "Meetings:\n2" in rendered
     assert "Ангеліна" in rendered and "Angie" in rendered
@@ -553,7 +553,7 @@ def test_render_object_view_with_evidence() -> None:
     objects list the exact same way mentions() resolves references — no new
     resolution mechanism."""
     evd = _obj("EVD-1", type_="evidence", title="Some excerpt", source_type="human_verification")
-    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-1"])
+    obj = _obj("PTN-1", title="Jordan", evidence=["EVD-1"])
     rendered = render_object_view(obj, [], [obj, evd])
     assert "Evidence:\nhuman_verification — EVD-1" in rendered
 
@@ -561,7 +561,7 @@ def test_render_object_view_with_evidence() -> None:
 def test_render_object_view_evidence_id_unresolved_is_skipped() -> None:
     """An evidence id not present among the loaded objects is skipped, not an
     error — same tolerance policy as mentions()'s unresolved references."""
-    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-GHOST"])
+    obj = _obj("PTN-1", title="Jordan", evidence=["EVD-GHOST"])
     rendered = render_object_view(obj, [], [obj])
     assert "Evidence:\n(none)" in rendered
 
@@ -570,19 +570,19 @@ def test_render_object_view_evidence_missing_source_type() -> None:
     """An Evidence object loaded without source_type (e.g. malformed data)
     renders an explicit placeholder rather than a blank or a crash."""
     evd = _obj("EVD-1", type_="evidence", title="Some excerpt")
-    obj = _obj("PTN-1", title="Angelina", evidence=["EVD-1"])
+    obj = _obj("PTN-1", title="Jordan", evidence=["EVD-1"])
     rendered = render_object_view(obj, [], [obj, evd])
     assert "Evidence:\n(source type unknown) — EVD-1" in rendered
 
 
 def test_mentions_resolves_statement_references_to_objects() -> None:
     """Task 2 — Reverse Navigation: Statement -> mentions -> Object."""
-    objs = [_obj("PTN-1", title="Angelina"), _obj("EMP-1", type_="employee", title="Oleh")]
+    objs = [_obj("PTN-1", title="Jordan"), _obj("EMP-1", type_="employee", title="Alex")]
     stmt = _stmt("1", references=[{"target": "PTN-1"}, {"target": "EMP-1"}])
     found = mentions(stmt, objs)
-    assert [o.title for o in found] == ["Angelina", "Oleh"]
-    assert "✓ Angelina" in render_mentions(stmt, objs)
-    assert "✓ Oleh" in render_mentions(stmt, objs)
+    assert [o.title for o in found] == ["Jordan", "Alex"]
+    assert "✓ Jordan" in render_mentions(stmt, objs)
+    assert "✓ Alex" in render_mentions(stmt, objs)
 
 
 def test_mentions_skips_unresolvable_reference() -> None:
@@ -596,7 +596,7 @@ def test_mentions_skips_unresolvable_reference() -> None:
 
 def test_meetings_mentioning_and_cross_meeting_view() -> None:
     """Task 3 — Cross-Meeting View."""
-    obj = _obj("PTN-1", title="Angelina")
+    obj = _obj("PTN-1", title="Jordan")
     stmts = [
         _stmt("1", meeting_ref="MTG-A", references=[{"target": "PTN-1"}]),
         _stmt("2", meeting_ref="MTG-B", references=[{"target": "PTN-1"}]),
@@ -620,7 +620,7 @@ def test_render_relationship_tree_walks_typed_relationships() -> None:
         "CMP-1", type_="company", title="Acme", relationships=[{"type": "owns", "target": "PRJ-1"}]
     )
     person = _obj(
-        "PTN-1", type_="partner", title="Angelina", relationships=[{"type": "works_with", "target": "CMP-1"}]
+        "PTN-1", type_="partner", title="Jordan", relationships=[{"type": "works_with", "target": "CMP-1"}]
     )
     tree = render_relationship_tree(person, [person, company, project])
     assert tree.split("\n\n↓\n\n") == ["Partner", "works_with", "Company", "owns", "Project"]
@@ -648,7 +648,7 @@ def test_render_entity_timeline_sorts_by_meeting_date() -> None:
     """Task 5 — Entity Timeline. meeting_date is a Reader M03 addition, now
     part of Contract v1.1's "Meeting" section (see models.VectorMeeting
     docstring); undated meetings sort last rather than being dropped."""
-    obj = _obj("PTN-1", title="Angelina")
+    obj = _obj("PTN-1", title="Jordan")
     stmts = [
         _stmt("1", meeting_ref="MTG-LATE", references=[{"target": "PTN-1"}]),
         _stmt("2", meeting_ref="MTG-EARLY", references=[{"target": "PTN-1"}]),
@@ -697,7 +697,7 @@ def test_filter_to_current_meetings_drops_superseded_reindex_runs() -> None:
 
 
 @pytestmark_real_vector
-def test_real_object_view_for_partner_angelina() -> None:
+def test_real_object_view_for_a_real_partner() -> None:
     """Cross-checks the two real references into PTN-20260727-A1NG confirmed
     directly (grep) in ai/staging/MTG-20260727-XMFL before writing this test."""
     root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
@@ -715,13 +715,13 @@ def test_real_object_view_for_partner_angelina() -> None:
     assert "Relationships:\n(none)" in rendered
     # Phase 3.1 PR-2 populated real evidence: [EVD-20260728-6HFR] on this
     # object, with source_type: human_verification — confirmed directly
-    # against objects/evidence/EVD-20260728-6HFR--angelina-owed-payment.md
-    # before writing this assertion, not assumed.
+    # against the real Evidence object's frontmatter before writing this
+    # assertion, not assumed.
     assert "Evidence:\nhuman_verification — EVD-20260728-6HFR" in rendered
 
 
 @pytestmark_real_vector
-def test_real_cross_meeting_view_for_employee_oleh() -> None:
+def test_real_cross_meeting_view_for_a_real_employee() -> None:
     root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
     objects = load_objects(VECTOR_REPO / "objects")
     obj = find_object(objects, "EMP-20260727-O1EG")
@@ -751,7 +751,7 @@ def test_real_filter_to_current_meetings_collapses_reindex_chain() -> None:
     """The bug this filter fixes, reproduced against real data: loading the
     FULL ai/staging/ tree (not one scoped meeting directory) sees the same
     real meeting 6 times over (M03-M07's reindex chain, same source_hash).
-    Without filtering, Angelina's Linked Statements/Meetings would be
+    Without filtering, this object's Linked Statements/Meetings would be
     overcounted by that factor; with it, the real counts match the
     single-directory test above exactly (2 statements, 1 meeting)."""
     staging_root = VECTOR_REPO / "ai" / "staging"

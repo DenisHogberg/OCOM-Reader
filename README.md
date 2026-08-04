@@ -109,7 +109,7 @@ one, such as one Meeting's staging folder) and is read-only:
 ```bash
 ocom-reader vector show path/to/STM-....md            # one Statement, full detail
 ocom-reader vector search path/to/vector-repo --signal task
-ocom-reader vector object path/to/vector-repo PTN-20260727-A1NG
+ocom-reader vector object path/to/vector-repo PTN-00000000-DEMO
 ocom-reader vector review path/to/vector-repo          # the Promotion Review queue
 ```
 

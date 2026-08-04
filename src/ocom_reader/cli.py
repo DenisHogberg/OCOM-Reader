@@ -97,10 +97,10 @@ Examples:
   ocom-reader repo use MyProject
   ocom-reader vector show path/to/STM-....md          (Reader M01)
   ocom-reader vector search path/to/vector-repo --signal task
-  ocom-reader vector object path/to/vector-repo PTN-20260727-A1NG   (Reader M03)
-  ocom-reader vector mentioned-in path/to/vector-repo PTN-20260727-A1NG
-  ocom-reader vector relationships path/to/vector-repo PTN-20260727-A1NG
-  ocom-reader vector timeline path/to/vector-repo PTN-20260727-A1NG
+  ocom-reader vector object path/to/vector-repo PTN-00000000-DEMO   (Reader M03)
+  ocom-reader vector mentioned-in path/to/vector-repo PTN-00000000-DEMO
+  ocom-reader vector relationships path/to/vector-repo PTN-00000000-DEMO
+  ocom-reader vector timeline path/to/vector-repo PTN-00000000-DEMO
   ocom-reader vector review path/to/vector-repo         (Reader M04)
   ocom-reader                      (interactive session)
   ocom-reader web                  (start the Web UI at http://127.0.0.1:8765)
@@ -270,25 +270,25 @@ def build_parser() -> argparse.ArgumentParser:
         "object", help="Object View — type, name, linked Statements, meetings, aliases, relationships"
     )
     vector_object.add_argument("root", type=Path, help="Vector repository root (objects/ and/or ai/staging/)")
-    vector_object.add_argument("object_id", help="Object id, e.g. PTN-20260727-A1NG")
+    vector_object.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
     vector_mentioned_in = vector_subparsers.add_parser(
         "mentioned-in", help="Cross-Meeting View — every Meeting whose Statements mention this object"
     )
     vector_mentioned_in.add_argument("root", type=Path, help="Vector repository root")
-    vector_mentioned_in.add_argument("object_id", help="Object id, e.g. PTN-20260727-A1NG")
+    vector_mentioned_in.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
     vector_relationships = vector_subparsers.add_parser(
         "relationships", help="Relationship Browser — text tree of this object's relationships"
     )
     vector_relationships.add_argument("root", type=Path, help="Vector repository root")
-    vector_relationships.add_argument("object_id", help="Object id, e.g. PTN-20260727-A1NG")
+    vector_relationships.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
     vector_timeline = vector_subparsers.add_parser(
         "timeline", help="Entity Timeline — mentions grouped by Meeting, sorted by meeting_date"
     )
     vector_timeline.add_argument("root", type=Path, help="Vector repository root")
-    vector_timeline.add_argument("object_id", help="Object id, e.g. PTN-20260727-A1NG")
+    vector_timeline.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
     # Reader M04 — Promotion Review UI (READER_M04_DESIGN.md). Deliberately
     # named "review", not "promotion" or "candidates" — Reader displays,

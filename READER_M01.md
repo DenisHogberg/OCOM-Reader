@@ -79,7 +79,7 @@ involved; an unknown signal name raises; the exact requested display block forma
   predate M04.3's `detected_signals`, most postdate it).
 - `objects/` (production — nothing promoted there yet in Vector) loads to an empty list,
   not an error.
-- `filter_by_signal(..., "task")` against `MTG-20260727-XMFL` returns exactly 17 matches —
+- `filter_by_signal(..., "task")` against `MTG-00000000-DEMO` returns exactly 17 matches —
   cross-checked against `ai/pipelines/M06_RESULTS.md`'s own independently-reported number
   for the same file, confirming Reader's reimplementation agrees with Vector's.
 - `find_current_meetings` against the real 5-times-reprocessed source_hash chain
@@ -91,7 +91,7 @@ involved; an unknown signal name raises; the exact requested display block forma
 
 **Manual CLI smoke tests**, real data:
 ```
-ocom-reader vector show <old-style Statement, MTG-20260727-IGJB>   -> Kind: fact, Detected Signals: (none)
+ocom-reader vector show <old-style Statement, MTG-00000000-DEM2>   -> Kind: fact, Detected Signals: (none)
 ocom-reader vector show <new-style Statement, task_signal>          -> Kind: task_signal, Detected Signals: ✓ task
 ocom-reader vector search <full ai/staging tree> --signal decision  -> 13 matches, no errors
 ocom-reader vector search <full ai/staging tree> --signal metric    -> 59 matches, no errors

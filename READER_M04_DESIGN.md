@@ -218,7 +218,7 @@ persisted.
 | **`statements` passed in without first calling `filter_to_current_meetings`** | Same Meeting appears as several duplicate sections, once per Vector reindex run | this is not a new failure mode invented for M04 — it is the exact bug M03 found and fixed for Object Navigation; `render_promotion_review` inherits it if a caller skips the filter, which is why the filter is stated as REQUIRED in Public API, not optional |
 | A Statement's `meeting_ref` doesn't resolve to any loaded Meeting | Falls into an `(unknown meeting)` sub-section, sorted last within its group | same tolerance policy as `render_mentions`' unresolved-reference handling in M03 — never dropped, never an error |
 | Meeting has no `meeting_date` | Sorts after all dated Meetings within the group | same convention `render_entity_timeline` already established |
-| A meeting longer than 99 minutes (`timestamp` format is zero-padded `MM:SS`, e.g. `"15:43"`) | Lexicographic string sort of `timestamp` would order incorrectly past 3-digit minutes (`"100:00"` sorts before `"99:59"`) | a real, currently theoretical edge case — checked the longest `timestamp` across every real staged Statement: `32:02` (`MTG-20260727-PKPX`), comfortably 2-digit, but real meetings already run over half an hour, so 99+ minutes is not a remote hypothetical. `render_promotion_review` should parse `timestamp` to seconds (`int(mm)*60+int(ss)`) for the sort key rather than compare the raw string, so this doesn't silently rely on no meeting ever crossing 99 minutes |
+| A meeting longer than 99 minutes (`timestamp` format is zero-padded `MM:SS`, e.g. `"15:43"`) | Lexicographic string sort of `timestamp` would order incorrectly past 3-digit minutes (`"100:00"` sorts before `"99:59"`) | a real, currently theoretical edge case — checked the longest `timestamp` across every real staged Statement: `32:02` (`MTG-00000000-DEM3`), comfortably 2-digit, but real meetings already run over half an hour, so 99+ minutes is not a remote hypothetical. `render_promotion_review` should parse `timestamp` to seconds (`int(mm)*60+int(ss)`) for the sort key rather than compare the raw string, so this doesn't silently rely on no meeting ever crossing 99 minutes |
 | Root path doesn't exist / has no Statements at all | Same as `load_statements()` today — returns `[]`, not an error | unchanged from M01 |
 
 ## Vector Contract assumptions
@@ -269,7 +269,7 @@ touching stored data.
   `test_render_signal_browser_lists_all_five_groups_even_when_empty`.
 
 **Real data**, against `~/Downloads/Vector` directly (not copied):
-- Cross-check `task_signal` count for `MTG-20260727-XMFL` against the number already
+- Cross-check `task_signal` count for `MTG-00000000-DEMO` against the number already
   independently confirmed twice in this project's history (M02's `READER_M02.md` cites
   Vector's own `M06_RESULTS.md` reporting `task_signal` count **7** for this exact
   Meeting; verified again while writing this design: `{'task_signal': 7, ...}` out of 98
@@ -282,7 +282,7 @@ touching stored data.
   six counts sum to the (post-filter) total and that `unclassified` is empty today (a
   currently-true fact about this data, not a structural guarantee — worth asserting
   precisely so a future regression is caught, not assumed away).
-- Real Meeting-date ordering: `MTG-20260727-XMFL` has a real `meeting_date` of
+- Real Meeting-date ordering: `MTG-00000000-DEMO` has a real `meeting_date` of
   `2026-07-27` (used already in M03's Entity Timeline tests) — confirms the sort key
   resolves correctly against real, not just synthetic, Meeting data.
 
@@ -296,7 +296,7 @@ before any synthetic fixture did:
 - `vector review ~/Downloads/Vector` (whole repo root) — confirm group counts sum
   correctly, confirm no Meeting section appears more than once for a reindexed
   transcript (the exact M03 bug class, now in a new command).
-- `vector review ~/Downloads/Vector/ai/staging/MTG-20260727-XMFL` (single meeting root)
+- `vector review ~/Downloads/Vector/ai/staging/MTG-00000000-DEMO` (single meeting root)
   — cross-check its `task_signal` count against the independently-known **7**.
 - An empty/nonexistent root — confirm all six groups still render at zero, no traceback.
 

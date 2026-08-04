@@ -71,7 +71,7 @@ signal+meeting filters correctly, narrowing to the intersection; unknown filter 
 repeated keys both raise; `compute_stats`/`render_stats` structure.
 
 **Real data (4 new, against `~/Downloads/Vector` directly)**:
-- `render_meeting_summary` numbers for `MTG-20260727-XMFL` cross-checked against
+- `render_meeting_summary` numbers for `MTG-00000000-DEMO` cross-checked against
   `M06_RESULTS.md`'s own independently-reported Zero-signal (42, 43%) and Multi-signal
   (23, 23%) counts — agree exactly.
 - `compute_stats` over the full real `ai/staging/` tree (10 Meetings, 900+ Statements
