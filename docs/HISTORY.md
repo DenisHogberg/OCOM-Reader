@@ -78,8 +78,8 @@ src/ocom_reader/
   reader.py     Reader                    — public facade over the four layers above     (M009-010)
   cli.py, __main__.py                     — CLI: `ocom-reader` / `python -m ocom_reader` (M009-010)
 
-  vector_integration/  read-only Vector integration (Reader M01-M04) — see
-                       docs/vector-integration.md, not covered further in this
+  companion_integration/  read-only Companion integration (Reader M01-M04) — see
+                       docs/companion-integration.md, not covered further in this
                        historical document.
 ```
 

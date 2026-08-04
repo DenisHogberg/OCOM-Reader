@@ -1,7 +1,7 @@
 # Reader Deployment Readiness — Container Verification Report
 
 **Status:** Verified against a real built image, not simulated. No functionality
-changed, no Vector integration added, no infrastructure modified, the production
+changed, no Companion integration added, no infrastructure modified, the production
 placeholder was not replaced.
 
 ## What was built
@@ -66,7 +66,7 @@ Fixed by reordering to `ocom-reader --repo /app/docroot web --host 0.0.0.0 --por
 ## Explicit confirmation of constraints honored
 
 - Reader's functionality: unchanged — no file under `src/` was modified.
-- Vector integration: not touched, not added — `/app/docroot` contains this
+- Companion integration: not touched, not added — `/app/docroot` contains this
   repository's own docs only.
 - Infrastructure architecture: not modified — `OCOM-Infrastructure`'s
   `docker-compose.yml`, Traefik config, and network were not changed.

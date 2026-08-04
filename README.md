@@ -7,8 +7,8 @@
 OCOM Reader is a CLI (and small Web UI / library) for asking deterministic,
 rule-based questions about a repository's own Markdown documentation, and for
 reading, searching, and reviewing operational data produced by a separate project
-called **Vector**. **Reader reads Vector's data; it is a separate, independent
-project and never modifies anything Vector produces.**
+called **Companion**. **Reader reads Companion's data; it is a separate, independent
+project and never modifies anything Companion produces.**
 
 ## Why Reader?
 
@@ -19,25 +19,25 @@ Two related but distinct problems, solved without an LLM in the loop by default:
   repository's own documentation and answers questions about it deterministically —
   the same query against an unchanged repository always produces byte-identical
   output, with no LLM, embeddings, or semantic search required.
-- Separately, a company using **Vector** (an OCOM-based operational memory platform —
+- Separately, a company using **Companion** (an OCOM-based operational memory platform —
   meetings, decisions, tasks, risks, and more, extracted from real transcripts) needs a
   way to browse, search, and review that data without writing more code against
-  Vector's raw files directly. Reader's `vector` subcommand is that read-only client.
+  Companion's raw files directly. Reader's `companion` subcommand is that read-only client.
 
-## Reader vs Vector
+## Reader vs Companion
 
 These are two separate GitHub repositories with two separate purposes:
 
-| | Reader (this repository) | Vector |
+| | Reader (this repository) | Companion |
 |---|---|---|
 | What it is | An open-source CLI/library — a *consumer* of data | A private, proprietary operational memory platform — a *producer* of data |
 | What it does | Reads, searches, and displays | Ingests real meeting transcripts, extracts Statements, stages them for human review |
-| Writes to Vector? | **Never.** Read-only, always. | — |
-| License | Apache-2.0 (this repository) | Proprietary, all rights reserved (Vector's own repository) |
+| Writes to Companion? | **Never.** Read-only, always. | — |
+| License | Apache-2.0 (this repository) | Proprietary, all rights reserved (Companion's own repository) |
 
-Reader talks to Vector only through a versioned, documented contract
-(`docs/vector-integration.md`) — never by assuming Vector's internal implementation
-details. A Vector repository is just a directory on disk you point Reader at; Reader
+Reader talks to Companion only through a versioned, documented contract
+(`docs/companion-integration.md`) — never by assuming Companion's internal implementation
+details. A Companion repository is just a directory on disk you point Reader at; Reader
 never requires network access to it.
 
 ## Features
@@ -45,9 +45,9 @@ never requires network access to it.
 - **Deterministic Q&A over a repository's own docs** — `ask`/`search`/`explain`/
   `related`, no LLM required (an optional LLM presentation layer exists — see
   `docs/HISTORY.md`).
-- **Vector integration** — signal-based search and browsing, object navigation
+- **Companion integration** — signal-based search and browsing, object navigation
   (Object View, cross-meeting mentions, a relationship browser, an entity timeline),
-  and a Promotion Review queue — 10 `vector` subcommands, all read-only.
+  and a Promotion Review queue — 10 `companion` subcommands, all read-only.
 - **Multi-repository workspace** — register and switch between repositories by name
   (`repo add`/`use`) instead of retyping paths.
 - **A plugin system** and **a small local Web UI**, both built on the same core.
@@ -68,67 +68,67 @@ pip install -e .
 # 1. Ask Reader about its own documentation — no external data needed.
 ocom-reader ask "identity resolution"
 
-# 2. Point Reader at a separate Vector repository you have on disk.
-#    (Substitute your own path — any directory containing Vector's
+# 2. Point Reader at a separate Companion repository you have on disk.
+#    (Substitute your own path — any directory containing Companion's
 #    objects/ and/or ai/staging/ trees works.)
-ocom-reader vector stats path/to/vector-repo
+ocom-reader companion stats path/to/companion-repo
 
-# 3. Run your first genuinely useful Vector command: see what a human
-#    should review next, grouped by what Vector's own pipeline detected.
-ocom-reader vector review path/to/vector-repo
+# 3. Run your first genuinely useful Companion command: see what a human
+#    should review next, grouped by what Companion's own pipeline detected.
+ocom-reader companion review path/to/companion-repo
 ```
 
 That's the whole loop: install, ask Reader something about itself, then point it at
-Vector and get a real, useful answer back. Everything past this point is optional
+Companion and get a real, useful answer back. Everything past this point is optional
 depth, not required to start using Reader.
 
 ## CLI Overview
 
 Reader has four command groups. This is a tour, not the full reference — run
-`ocom-reader <command> --help` for every flag, or see `docs/vector-integration.md` for
-the complete, versioned Vector command reference.
+`ocom-reader <command> --help` for every flag, or see `docs/companion-integration.md` for
+the complete, versioned Companion command reference.
 
 | Command | Does |
 |---|---|
 | `ask` / `search` / `explain` / `related` | Deterministic Q&A over a repository's own Markdown docs |
 | `repo add` / `use` / `list` / `remove` | Register repositories by name, switch the active one |
-| `vector show` / `search` / `signals` / `summary` / `stats` | Read and search Vector Statements by signal |
-| `vector object` / `mentioned-in` / `relationships` / `timeline` | Navigate Vector objects and their relationships |
-| `vector review` | Group Statements by `statement_kind` for human promotion review |
+| `companion show` / `search` / `signals` / `summary` / `stats` | Read and search Companion Statements by signal |
+| `companion object` / `mentioned-in` / `relationships` / `timeline` | Navigate Companion objects and their relationships |
+| `companion review` | Group Statements by `statement_kind` for human promotion review |
 | `plugin list` / `info` / `enable` / `disable` / `reload` | Manage the plugin system |
 | `web` | Start the local Web UI (`http://127.0.0.1:8765`) |
 
 Also usable as a library — `from ocom_reader.reader import Reader` — see
 `docs/HISTORY.md`'s "Programmatic use" section for a runnable example.
 
-## Working with Vector
+## Working with Companion
 
-Every `vector` subcommand takes a path to a Vector repository (or a subdirectory of
+Every `companion` subcommand takes a path to a Companion repository (or a subdirectory of
 one, such as one Meeting's staging folder) and is read-only:
 
 ```bash
-ocom-reader vector show path/to/STM-....md            # one Statement, full detail
-ocom-reader vector search path/to/vector-repo --signal task
-ocom-reader vector object path/to/vector-repo PTN-00000000-DEMO
-ocom-reader vector review path/to/vector-repo          # the Promotion Review queue
+ocom-reader companion show path/to/STM-....md            # one Statement, full detail
+ocom-reader companion search path/to/companion-repo --signal task
+ocom-reader companion object path/to/companion-repo PTN-00000000-DEMO
+ocom-reader companion review path/to/companion-repo          # the Promotion Review queue
 ```
 
-Reader currently reads two things beyond what Vector's contract formally covers yet
-(`Meeting.meeting_date`, and the common object schema `VectorObject` relies on) — both
+Reader currently reads two things beyond what Companion's contract formally covers yet
+(`Meeting.meeting_date`, and the common object schema `CompanionObject` relies on) — both
 flagged explicitly, both optional/tolerant of absence. Full guarantees, compatibility
-notes, and every command's exact output format: **`docs/vector-integration.md`**.
+notes, and every command's exact output format: **`docs/companion-integration.md`**.
 
 ## Architecture Overview
 
 ```
 Repository -> RepositoryIndex -> KnowledgeRegistry -> RetrievalEngine -> AnswerComposer -> Reader / CLI
                                                                                   ↑
-Vector repository -> vector_integration/ (loader, signals, navigation, promotion) ┘
+Companion repository -> companion_integration/ (loader, signals, navigation, promotion) ┘
 ```
 
 Two independent pipelines share one CLI and one `Reader` facade: the original
 Adapter/Normalizer core plus the deterministic documentation-Q&A pipeline built on top
-of it, and the separate, read-only `vector_integration/` package this repository's
+of it, and the separate, read-only `companion_integration/` package this repository's
 recent milestones (M01-M04) added. Neither pipeline's internals leak into the other.
 
 The full historical narrative — the Adapter/Normalizer core, Phases 1-5, and the
@@ -136,21 +136,21 @@ original architectural principles this project started from — is preserved in
 **`docs/HISTORY.md`**, not deleted, just moved out of this file so it doesn't crowd out
 getting started. Design docs for every individual milestone live in
 [`docs/architecture/`](docs/architecture/) (the original M006-M021 track) and this
-repository's root `READER_M0X.md`/`READER_M0X_DESIGN.md` files (the Vector-integration
+repository's root `READER_M0X.md`/`READER_M0X_DESIGN.md` files (the Companion-integration
 track, M01-M04 — a separate, restarted count; see `CHANGELOG.md`'s "Project History"
 section if the two numbering schemes are ever confusing side by side).
 
 ## Current Status
 
 512 tests passing. Implemented: the Reader MVP (deterministic Q&A), extensibility
-(multi-repo workspace, plugins), a Web UI, an optional LLM layer, and the Vector
+(multi-repo workspace, plugins), a Web UI, an optional LLM layer, and the Companion
 integration (M01 Contract Compliance through M04 Promotion Review UI).
 
-**Known limitations**, checked directly against real data, not assumed: Vector's real
+**Known limitations**, checked directly against real data, not assumed: Companion's real
 `relationships` and `alias:` tags are currently unpopulated (0 of 6 real objects have
 either), so the Relationship Browser has nothing real to show yet; speaker identity is
-unresolved on Vector's side, so `speaker:` search won't match a real name yet; Vector
-has no persisted "Promotion Candidate" data, so `vector review` groups by
+unresolved on Companion's side, so `speaker:` search won't match a real name yet; Companion
+has no persisted "Promotion Candidate" data, so `companion review` groups by
 `statement_kind` only, deliberately, rather than inventing a richer classification
 Reader has no contracted basis for.
 
@@ -160,7 +160,7 @@ Full detail, including exactly which fields are contracted versus flagged except
 ## Production
 
 A `Dockerfile` builds a production image of the Web UI (`ocom-reader --repo /app/docroot
-web --host 0.0.0.0 --port 8765`), independent of any Vector repository:
+web --host 0.0.0.0 --port 8765`), independent of any Companion repository:
 
 ```bash
 docker build -t ocom-reader:local .
@@ -173,8 +173,8 @@ up --build`.
 
 **What the container serves**: this repository's own documentation (`README.md`,
 `CHANGELOG.md`, the `READER_*.md` reports, and `docs/`) — baked into the image at
-`/app/docroot`, indexed by Reader itself. No Vector repository is mounted or
-referenced; the web UI has no Vector wiring today, so this is also the only content it
+`/app/docroot`, indexed by Reader itself. No Companion repository is mounted or
+referenced; the web UI has no Companion wiring today, so this is also the only content it
 is capable of serving. This is a deliberate choice, not a placeholder: a public
 deployment of Reader must only ever show non-corporate example content.
 
@@ -191,7 +191,7 @@ into.
 
 ## Documentation
 
-- **`docs/vector-integration.md`** — the Vector integration's supported contract
+- **`docs/companion-integration.md`** — the Companion integration's supported contract
   version, compatibility guarantees, and every command's exact output.
 - **`docs/HISTORY.md`** — the original Adapter/Normalizer core narrative (Phases 1-5)
   and early architecture, preserved in full.
@@ -200,7 +200,7 @@ into.
 - **`READER_STATUS.md`** — capabilities, contract dependencies, and limitations at a
   glance.
 - **`READER_M01.md`** through **`READER_M04.md`**, plus **`READER_M04_DESIGN.md`** —
-  the Vector-integration milestone reports, including the design-review-before-code
+  the Companion-integration milestone reports, including the design-review-before-code
   discipline established for M04 onward.
 - **`READER_ROADMAP_REVIEW.md`**, **`READER_PRODUCT_READINESS.md`** — the analysis
   behind why this Product Readiness sequence (License → CI → Changelog → this README)

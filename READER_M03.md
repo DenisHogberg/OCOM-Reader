@@ -1,8 +1,8 @@
 # Reader M03 — Object Navigation
 
-**Date:** 2026-07-27 · **Repository:** OCOM-Reader only — Vector was not touched
+**Date:** 2026-07-27 · **Repository:** OCOM-Reader only — Companion was not touched
 **Builds on:** `READER_M01.md` (Contract Compliance), `READER_M02.md` (Signal Explorer) —
-same `vector_integration/` package, no changes to `VectorStatement`'s field set, no
+same `companion_integration/` package, no changes to `CompanionStatement`'s field set, no
 change to Contract Version (still 1.0).
 
 ## Goal
@@ -15,48 +15,48 @@ Cross-Meeting View, a text-only Relationship Browser, and an Entity Timeline.
 
 All additive, in `~/Downloads/OCOM-Reader` only:
 
-- **`vector_integration/models.py`** — added `KNOWN_OBJECT_TYPES` (the 11 non-Statement/
-  Meeting Vector types) and a new `VectorObject` model covering Vector's *common* object
+- **`companion_integration/models.py`** — added `KNOWN_OBJECT_TYPES` (the 11 non-Statement/
+  Meeting Companion types) and a new `CompanionObject` model covering Companion's *common* object
   frontmatter (id/type/title/tenant/owner/status/lifecycle/confidence/source/
   relationships/references/evidence/tags), with an `aliases()` method reading the
-  `alias:<form>` tags convention. Added `VectorMeeting.meeting_date` (optional). **Both
+  `alias:<form>` tags convention. Added `CompanionMeeting.meeting_date` (optional). **Both
   are explicitly flagged as beyond Contract v1.0's stated scope** — see
-  `docs/vector-integration.md`'s "Supported contract version" section and "What Reader
+  `docs/companion-integration.md`'s "Supported contract version" section and "What Reader
   does NOT do" below.
-- **`vector_integration/loader.py`** — added `load_objects()`, globbing every `*.md` and
+- **`companion_integration/loader.py`** — added `load_objects()`, globbing every `*.md` and
   filtering by `type in KNOWN_OBJECT_TYPES` (no shared filename prefix across 11 types,
   unlike Statement/Meeting's `STM-`/`MTG-` convention), plus `_NON_OBJECT_FILENAMES` to
   skip `README.md`/`REVIEW.md`.
-- **`vector_integration/navigation.py`** (new) — `find_object()`, `linked_statements()`,
+- **`companion_integration/navigation.py`** (new) — `find_object()`, `linked_statements()`,
   `linked_meeting_ids()`, `render_object_view()` (Task 1); `mentions()`/
   `render_mentions()` (Task 2); `meetings_mentioning()`/`render_cross_meeting_view()`
   (Task 3); `render_relationship_tree()`, a cycle-safe plain-text walk (Task 4);
   `render_entity_timeline()` (Task 5); and `filter_to_current_meetings()` — see "A real
   bug, found by actually running this" below.
-- **`cli.py`** — four new subcommands (`vector object`, `vector mentioned-in`,
-  `vector relationships`, `vector timeline`), and `vector show` gained an optional
+- **`cli.py`** — four new subcommands (`companion object`, `companion mentioned-in`,
+  `companion relationships`, `companion timeline`), and `companion show` gained an optional
   `--root` flag that additionally prints a Mentions block.
-- **`docs/vector-integration.md`** — new "beyond Contract v1.0" section, three new
+- **`docs/companion-integration.md`** — new "beyond Contract v1.0" section, three new
   limitations, five new CLI examples.
-- **`tests/test_vector_integration.py`** — 17 new tests (499 total in the file *and*
+- **`tests/test_companion_integration.py`** — 17 new tests (499 total in the file *and*
   suite — see Regression below).
 
 ## Naming deviation from the milestone's own example, documented as in M02
 
 The milestone's illustrative CLI (`ocom-reader object OBJ-123`) is a bare top-level
 command. Kept consistent with M01/M02 instead: everything here lives under the existing
-`vector` subcommand namespace (`vector object`, `vector mentioned-in`,
-`vector relationships`, `vector timeline`), for the same reason `vector summary` was
-named that way in M02 — a Vector repository is a separate, external input, not "the
+`companion` subcommand namespace (`companion object`, `companion mentioned-in`,
+`companion relationships`, `companion timeline`), for the same reason `companion summary` was
+named that way in M02 — a Companion repository is a separate, external input, not "the
 repository being read" in Pipeline A's sense, and mixing a bare `object` command into
 Reader's own top-level command set would blur that line.
 
 ## A real bug, found by actually running this against real data (not synthetic fixtures)
 
-Vector's own M03 (Source Identity & Idempotent Import) reprocesses the same real meeting
+Companion's own M03 (Source Identity & Idempotent Import) reprocesses the same real meeting
 multiple times as its pipeline improves — same `source_hash`, different
 `parser_version` — leaving several superseded Meeting objects with the same title
-sitting side by side in `ai/staging/`. Running `vector object` against Vector's real
+sitting side by side in `ai/staging/`. Running `companion object` against Companion's real
 *repository root* (not a single meeting's staging directory, which is what M01/M02's
 tests and the earlier drafts of this milestone's own tests used) surfaced this directly:
 Jordan's (`PTN-00000000-DEMO`) Linked Statements showed **12** and Meetings showed
@@ -67,37 +67,37 @@ numbers (confirmed independently via `grep` before writing any code) are **2** S
 in **1** meeting.
 
 Fixed with `navigation.filter_to_current_meetings()`, which reuses
-`loader.find_current_meetings()` — the identical `supersedes`-chain resolution Vector's
+`loader.find_current_meetings()` — the identical `supersedes`-chain resolution Companion's
 own pipeline already relies on for idempotent import — rather than inventing a second
 notion of "current" on Reader's side. `object`, `mentioned-in`, and `timeline` all filter
 through it before aggregating across meetings. `show --root` (reverse navigation from one
 already-selected Statement) is unaffected, since it never aggregates across meetings in
 the first place. A dedicated test, `test_real_filter_to_current_meetings_collapses_reindex_chain`,
-reproduces the bug against Vector's real full `ai/staging/` tree and confirms the fix
+reproduces the bug against Companion's real full `ai/staging/` tree and confirms the fix
 brings the count back down to the correct 2/1.
 
 ## Beyond Contract v1.0 — an honest gap, not silently worked around
 
-`vector-reader-contract.md` v1.0 governs Statement fields only (plus two Meeting fields).
-Object Navigation genuinely needed two things outside that: the `VectorObject` model
-(Vector's common object frontmatter has no published contract at all yet) and
+`companion-reader-contract.md` v1.0 governs Statement fields only (plus two Meeting fields).
+Object Navigation genuinely needed two things outside that: the `CompanionObject` model
+(Companion's common object frontmatter has no published contract at all yet) and
 `Meeting.meeting_date` (needed for Entity Timeline's chronological sort; no
 contract-covered field substitutes — `Statement.created` is Reader's ingestion date, not
 the meeting's date, and `Statement.timestamp` is only an offset within the recording).
 Both are read defensively (optional, tolerant of absence) and both are flagged in
-`docs/vector-integration.md` with a concrete recommendation: Vector should publish a
+`docs/companion-integration.md` with a concrete recommendation: Companion should publish a
 second contract or a v1.1 addendum covering the common object schema, the same way
 Statement's fields are covered today.
 
-## Discrepancies between the milestone's illustrative examples and Vector's real model
+## Discrepancies between the milestone's illustrative examples and Companion's real model
 
-- The milestone's example uses a `Person` type and a `Finance Team` object — Vector has
+- The milestone's example uses a `Person` type and a `Finance Team` object — Companion has
   no `Person` type (its people-shaped types are `Partner` and `Employee`) and no
-  `Finance Team` object exists in real data. `VectorObject`/`load_objects()` are built
-  against Vector's actual 11 non-Statement/Meeting types (`KNOWN_OBJECT_TYPES`), not the
+  `Finance Team` object exists in real data. `CompanionObject`/`load_objects()` are built
+  against Companion's actual 11 non-Statement/Meeting types (`KNOWN_OBJECT_TYPES`), not the
   milestone's illustrative names.
 - The milestone's Relationship Browser example uses `works_with` as a relationship type.
-  Vector's own documented relationship vocabulary doesn't include it (checked against
+  Companion's own documented relationship vocabulary doesn't include it (checked against
   `docs/relationships-and-references.md`), and real objects have zero relationships
   populated regardless. `render_relationship_tree()` is deliberately generic — it walks
   whatever `type`/`target` pairs are present without hardcoding any type name — so this
@@ -106,7 +106,7 @@ Statement's fields are covered today.
 
 ## An honest limitation: no real relationships or aliases to validate against
 
-Checked directly (not assumed): all 6 real Vector objects
+Checked directly (not assumed): all 6 real Companion objects
 (`PTN-00000000-DEMO--angelina.md`, `PTN-00000000-DEM2--bondarenko.md`,
 `PTN-00000000-DEM3--nevidomyi.md`, `PTN-00000000-DEM4--olena.md`,
 `EMP-00000000-DEMO--denys.md`, `EMP-00000000-DEM2--oleh.md`) have empty `relationships`,
@@ -121,14 +121,14 @@ Checked directly (not assumed): all 6 real Vector objects
   (A → B → A, confirmed to terminate rather than recurse forever).
 
 By contrast, **Linked Statements, Mentions, Cross-Meeting View, and Entity Timeline** all
-have real data behind them — Vector's real `references` do point from Statements to
-Partner/Employee objects — and are tested against Vector's actual
+have real data behind them — Companion's real `references` do point from Statements to
+Partner/Employee objects — and are tested against Companion's actual
 `ai/staging/MTG-00000000-DEMO` in addition to synthetic fixtures.
 
 ## Post-review refactor (same day, before M04)
 
 A review pass asked four verification questions (relationships-absence safety,
-Reader's ability to run on today's Vector data without relationships/aliases,
+Reader's ability to run on today's Companion data without relationships/aliases,
 whether new relationships would require reindexing, and O(n) vs O(n²) in the new
 CLI commands). Answering them empirically surfaced two small, real inefficiencies in
 `navigation.py`, fixed immediately as plain refactors (no new functionality, no
@@ -148,7 +148,7 @@ behavior change):
   match.
 
 Verified before and after with an instrumented real-data run
-(`~/Downloads/Vector`, `PTN-00000000-DEMO`): `linked_statements` calls inside
+(`~/Downloads/Companion`, `PTN-00000000-DEMO`): `linked_statements` calls inside
 `render_object_view` dropped from 2 to 1, output unchanged (2 Linked Statements, 1
 Meeting). Full suite re-run: **499 passed**, unchanged.
 
@@ -170,10 +170,10 @@ known to reference `PTN-00000000-DEMO`; Entity Timeline using the real
 `meeting_date: '2026-07-27'` on `MTG-00000000-DEMO`; and the reindex-collapsing fix
 itself, reproduced against the real, full `ai/staging/` tree.
 
-**Manual CLI smoke tests**, real data: `vector object`, `vector mentioned-in`,
-`vector relationships`, `vector timeline` against `PTN-00000000-DEMO` under the full
-`~/Downloads/Vector` root (this is what surfaced the reindex-overcounting bug above,
-before the fix and after); `vector show --root` printing a correct Mentions block; a
+**Manual CLI smoke tests**, real data: `companion object`, `companion mentioned-in`,
+`companion relationships`, `companion timeline` against `PTN-00000000-DEMO` under the full
+`~/Downloads/Companion` root (this is what surfaced the reindex-overcounting bug above,
+before the fix and after); `companion show --root` printing a correct Mentions block; a
 nonexistent object id producing a clean `Error: ...` on stderr with exit code 1, not a
 traceback.
 
@@ -184,22 +184,22 @@ failures.
 
 | Criterion | Status |
 |---|---|
-| Object View (Type/Name/Linked Statements/Meetings/Aliases/Relationships) | ✅ `vector object` |
-| Reverse Navigation (Statement → mentions → Object) | ✅ `vector show --root` |
-| Cross-Meeting View | ✅ `vector mentioned-in` |
-| Relationship Browser (text tree, no graphical visualization) | ✅ `vector relationships` |
-| Entity Timeline | ✅ `vector timeline` |
-| Contract v1.0 compatibility preserved | ✅ no field added/removed on `VectorStatement`; full M01+M02 test suite passes unmodified |
+| Object View (Type/Name/Linked Statements/Meetings/Aliases/Relationships) | ✅ `companion object` |
+| Reverse Navigation (Statement → mentions → Object) | ✅ `companion show --root` |
+| Cross-Meeting View | ✅ `companion mentioned-in` |
+| Relationship Browser (text tree, no graphical visualization) | ✅ `companion relationships` |
+| Entity Timeline | ✅ `companion timeline` |
+| Contract v1.0 compatibility preserved | ✅ no field added/removed on `CompanionStatement`; full M01+M02 test suite passes unmodified |
 
 ## What Reader M03 deliberately does not do
 
 - No resolution of the "no real relationships/aliases" gap above — that requires real
-  Vector data to change, not Reader.
+  Companion data to change, not Reader.
 - No object-level change history — Entity Timeline is a timeline of *mentions*, not of
-  field-level changes to the object itself (Reader has no access to Vector's git
+  field-level changes to the object itself (Reader has no access to Companion's git
   history); documented explicitly in `render_entity_timeline`'s docstring and
-  `docs/vector-integration.md` to avoid overstating what's actually shown.
-- No integration into Reader's own `ask`/`search`/`explain`/`Reader` facade — `vector`
+  `docs/companion-integration.md` to avoid overstating what's actually shown.
+- No integration into Reader's own `ask`/`search`/`explain`/`Reader` facade — `companion`
   remains a fully independent CLI subcommand, unchanged from M01/M02.
-- No promotion, no object creation — Reader only displays what Vector has already
+- No promotion, no object creation — Reader only displays what Companion has already
   produced.

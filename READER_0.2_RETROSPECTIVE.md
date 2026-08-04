@@ -9,16 +9,16 @@ one.
 
 ## What M01-M04 achieved
 
-Reader went from zero Vector integration to a full, tested, read-only client in four
+Reader went from zero Companion integration to a full, tested, read-only client in four
 milestones: reading Statement/Meeting data against a versioned contract (M01), signal
 search and browsing (M02), object navigation — views, reverse mentions, cross-meeting
 tracking, a relationship browser, a timeline (M03) — and a Promotion Review queue
-(M04). Ten `vector` CLI subcommands, all read-only, all exercised against Vector's
+(M04). Ten `companion` CLI subcommands, all read-only, all exercised against Companion's
 actual repository throughout, not only synthetic fixtures.
 
 The harder win wasn't the feature count — it was holding a line under real temptation
-to cross it. M04's design review found that Vector has no persisted Promotion
-Candidate data at all; the obvious shortcut was to replicate Vector's own analysis-only
+to cross it. M04's design review found that Companion has no persisted Promotion
+Candidate data at all; the obvious shortcut was to replicate Companion's own analysis-only
 signal-combination table inside Reader and ship something that *looked* more capable.
 That was rejected, in writing, before any code existed, and the rejection became a
 standing rule (M04's Design Principle) rather than a one-off call. Two real bugs were
@@ -51,7 +51,7 @@ early (P05) — followed by actually pushing once that gap was named.
 - **Grounding claims in real data instead of reasoning from the design.** Every time
   this was skipped even slightly — a guess about typical meeting length, an assumption
   that a scoped test directory represented the whole repository — it was wrong. Every
-  time a claim was checked against `~/Downloads/Vector` directly before being written
+  time a claim was checked against `~/Downloads/Companion` directly before being written
   down, it held up. The pattern is consistent enough across eight milestones to trust
   as a rule, not a coincidence.
 - **Refusing the generic default when a specific answer was better-grounded.** MIT
@@ -75,28 +75,28 @@ undifferentiated "future work" pile:
 
 **Deferred by Reader's own choice** — things Reader could build now but chose not to,
 on purpose:
-- Full-text search over `Statement.text` and wiring `vector` into the existing
+- Full-text search over `Statement.text` and wiring `companion` into the existing
   multi-repo workspace mechanism — both identified as real, buildable, low-risk gaps
   (`READER_ROADMAP_REVIEW.md`), deliberately left for a future cycle rather than
   bundled into this one.
 - A richer Promotion Candidate classification (beyond `statement_kind` alone) — not a
-  gap to close later so much as a boundary to keep permanently, unless Vector itself
+  gap to close later so much as a boundary to keep permanently, unless Companion itself
   ever publishes real candidate data. This one isn't "not yet"; it's "not Reader's to
   build."
 - Dependency version pinning, a documentation index for `docs/architecture/`'s 46
   files, and per-file license headers — real, minor, explicitly named, not urgent.
 
-**Deferred because they're blocked on Vector, not on Reader** — no amount of future
+**Deferred because they're blocked on Companion, not on Reader** — no amount of future
 Reader work closes these on its own:
-- `meeting_date` and the `VectorObject` schema remain outside Vector's formal contract,
+- `meeting_date` and the `CompanionObject` schema remain outside Companion's formal contract,
   flagged in every document that depends on them since M03, still unresolved on
-  Vector's side.
-- `relationships` and `alias:` tags are unpopulated in every real Vector object that
+  Companion's side.
+- `relationships` and `alias:` tags are unpopulated in every real Companion object that
   exists today — the Relationship Browser and Aliases display are correct and tested,
   with nothing real yet to point them at.
-- Speaker identity resolution doesn't exist in Vector yet, so `speaker:` search can't
+- Speaker identity resolution doesn't exist in Companion yet, so `speaker:` search can't
   match a real name no matter what Reader does.
-- Real Vector data is still one tenant, five current meetings, two of twelve object
+- Real Companion data is still one tenant, five current meetings, two of twelve object
   types populated — not a defect, just where things actually are right now.
 
 None of these were discovered late. Every one was named, in writing, at the moment it

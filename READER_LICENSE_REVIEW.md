@@ -12,13 +12,13 @@ checked situation — not a generic checklist:
 
 - **Reader is a standalone project.** Its license governs Reader's own source code in
   this repository only.
-- **Reader integrates with Vector but is not part of it, and does not redistribute
-  Vector's code.** Checked directly: Vector's own `LICENSE`
-  (`~/Downloads/Vector/LICENSE`) is proprietary, "All Rights Reserved" — a completely
-  separate, private repository. Reader consumes Vector's data read-only, through a
-  documented contract (`vector-reader-contract.md`); it never vendors, embeds, or
-  redistributes any Vector source. **Vector's license has no bearing on Reader's
-  choice, and Reader's choice has no bearing on Vector.** This is a real, checked
+- **Reader integrates with Companion but is not part of it, and does not redistribute
+  Companion's code.** Checked directly: Companion's own `LICENSE`
+  (`~/Downloads/Companion/LICENSE`) is proprietary, "All Rights Reserved" — a completely
+  separate, private repository. Reader consumes Companion's data read-only, through a
+  documented contract (`companion-reader-contract.md`); it never vendors, embeds, or
+  redistributes any Companion source. **Companion's license has no bearing on Reader's
+  choice, and Reader's choice has no bearing on Companion.** This is a real, checked
   non-interaction, not an assumption.
 - **Reader is explicitly self-described as a *reference implementation*.** Reader's own
   `README.md`: "the first reference **Adapter** implementation of the OCOM

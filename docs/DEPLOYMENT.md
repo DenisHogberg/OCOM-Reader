@@ -34,9 +34,9 @@ document was written — see `READER_PRODUCT_READINESS.md`'s sibling report,
 
 `/app/docroot`, baked into the image at build time: this repository's own
 `README.md`, `CHANGELOG.md`, `READER_*.md` reports, and `docs/`. Nothing else —
-no Vector repository is ever mounted or referenced by this image. This is
+no Companion repository is ever mounted or referenced by this image. This is
 intentional, not a placeholder: a publicly reachable Reader instance must only ever
-show non-corporate example content, and the web UI has no Vector integration to
+show non-corporate example content, and the web UI has no Companion integration to
 accidentally expose in the first place.
 
 ## Persistent cache (optional but recommended)

@@ -101,14 +101,14 @@ actually do was rehearsed directly:
 
 - `pip install -e . pytest` and `pytest` are exactly the commands already run
   successfully throughout this session (512 passed locally).
-- **The one thing that could not be assumed**: `tests/test_vector_integration.py`
-  conditionally skips 14 real-data tests (`pytestmark_real_vector`) whenever
-  `~/Downloads/Vector` doesn't exist — which it won't, on a GitHub-hosted runner. Rather
+- **The one thing that could not be assumed**: `tests/test_companion_integration.py`
+  conditionally skips 14 real-data tests (`pytestmark_real_companion`) whenever
+  `~/Downloads/Companion` doesn't exist — which it won't, on a GitHub-hosted runner. Rather
   than assume this degrades gracefully, it was checked directly: the real
-  `~/Downloads/Vector` directory was moved aside temporarily, the full suite was run
+  `~/Downloads/Companion` directory was moved aside temporarily, the full suite was run
   exactly as CI will run it, and it was moved back immediately after. Result: **498
   passed, 14 skipped, zero failures** — confirming CI will go green on a fresh runner
-  with no Vector repository present, exactly as the existing `skipif` markers are
+  with no Companion repository present, exactly as the existing `skipif` markers are
   designed to handle, not something newly discovered to be a problem.
 
 ## 6. Explicitly out of scope for P02

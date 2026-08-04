@@ -64,9 +64,9 @@ from ocom_reader.interactive import run_interactive
 from ocom_reader.llm import LLMAdapter, LLMConfig, LLMProviderName
 from ocom_reader.plugins import PluginError, PluginManager
 from ocom_reader.reader import Reader
-from ocom_reader.vector_integration.loader import load_meetings, load_objects, load_statements, parse_frontmatter
-from ocom_reader.vector_integration.models import KNOWN_SIGNALS, VectorStatement
-from ocom_reader.vector_integration.navigation import (
+from ocom_reader.companion_integration.loader import load_meetings, load_objects, load_statements, parse_frontmatter
+from ocom_reader.companion_integration.models import KNOWN_SIGNALS, CompanionStatement
+from ocom_reader.companion_integration.navigation import (
     filter_to_current_meetings,
     find_object,
     render_cross_meeting_view,
@@ -75,15 +75,15 @@ from ocom_reader.vector_integration.navigation import (
     render_object_view,
     render_relationship_tree,
 )
-from ocom_reader.vector_integration.promotion import render_promotion_review
-from ocom_reader.vector_integration.query import search as vector_query_search
-from ocom_reader.vector_integration.signals import (
+from ocom_reader.companion_integration.promotion import render_promotion_review
+from ocom_reader.companion_integration.query import search as companion_query_search
+from ocom_reader.companion_integration.signals import (
     filter_by_signal,
     render_meeting_summary,
     render_signal_browser,
     render_statement,
 )
-from ocom_reader.vector_integration.stats import compute_stats, render_stats
+from ocom_reader.companion_integration.stats import compute_stats, render_stats
 from ocom_reader.web import DEFAULT_HOST, DEFAULT_PORT, start_server
 from ocom_reader.workspace import WorkspaceError, WorkspaceManager
 
@@ -95,13 +95,13 @@ Examples:
   ocom-reader explain "identity resolution"
   ocom-reader repo add ~/Projects/MyProject
   ocom-reader repo use MyProject
-  ocom-reader vector show path/to/STM-....md          (Reader M01)
-  ocom-reader vector search path/to/vector-repo --signal task
-  ocom-reader vector object path/to/vector-repo PTN-00000000-DEMO   (Reader M03)
-  ocom-reader vector mentioned-in path/to/vector-repo PTN-00000000-DEMO
-  ocom-reader vector relationships path/to/vector-repo PTN-00000000-DEMO
-  ocom-reader vector timeline path/to/vector-repo PTN-00000000-DEMO
-  ocom-reader vector review path/to/vector-repo         (Reader M04)
+  ocom-reader companion show path/to/STM-....md          (Reader M01)
+  ocom-reader companion search path/to/companion-repo --signal task
+  ocom-reader companion object path/to/companion-repo PTN-00000000-DEMO   (Reader M03)
+  ocom-reader companion mentioned-in path/to/companion-repo PTN-00000000-DEMO
+  ocom-reader companion relationships path/to/companion-repo PTN-00000000-DEMO
+  ocom-reader companion timeline path/to/companion-repo PTN-00000000-DEMO
+  ocom-reader companion review path/to/companion-repo         (Reader M04)
   ocom-reader                      (interactive session)
   ocom-reader web                  (start the Web UI at http://127.0.0.1:8765)
   ocom-reader completion bash      (print a bash completion script)
@@ -209,95 +209,95 @@ def build_parser() -> argparse.ArgumentParser:
     web_parser.add_argument("--host", default=DEFAULT_HOST, help=f"Interface to bind (default: {DEFAULT_HOST})")
     web_parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port to bind (default: {DEFAULT_PORT})")
 
-    # Reader M01 — Contract Compliance (docs/contracts/vector-reader-contract.md).
-    # Independent of Reader's own --repo/workspace machinery: a Vector repository
+    # Reader M01 — Contract Compliance (docs/contracts/companion-reader-contract.md).
+    # Independent of Reader's own --repo/workspace machinery: a Companion repository
     # is a separate, external input, not "the repository being read" in Pipeline
-    # A's sense — see vector_integration/ and READER_M01.md.
-    vector_parser = subparsers.add_parser(
-        "vector", help="Read Vector Statement/Meeting objects (vector-reader-contract.md)"
+    # A's sense — see companion_integration/ and READER_M01.md.
+    companion_parser = subparsers.add_parser(
+        "companion", help="Read Companion Statement/Meeting objects (companion-reader-contract.md)"
     )
-    vector_subparsers = vector_parser.add_subparsers(dest="vector_command", required=True)
+    companion_subparsers = companion_parser.add_subparsers(dest="companion_command", required=True)
 
-    vector_show = vector_subparsers.add_parser(
+    companion_show = companion_subparsers.add_parser(
         "show", help="Display one Statement's Kind + Detected Signals"
     )
-    vector_show.add_argument("path", type=Path, help="Path to a Vector Statement .md file")
-    vector_show.add_argument(
+    companion_show.add_argument("path", type=Path, help="Path to a Companion Statement .md file")
+    companion_show.add_argument(
         "--root", type=Path, default=None,
-        help="Reader M03: a Vector repository root to resolve this Statement's "
+        help="Reader M03: a Companion repository root to resolve this Statement's "
              "references against, additionally printing a Mentions block",
     )
 
     # M02: search now takes an optional combinable `key:value` query
     # ("signal:task speaker:Denis meeting:XMFL") alongside M01's original
     # --signal flag, kept for backward compatibility with the M01 CLI.
-    vector_search = vector_subparsers.add_parser(
+    companion_search = companion_subparsers.add_parser(
         "search", help="Filter Statements — combinable signal:/speaker:/meeting: query"
     )
-    vector_search.add_argument(
-        "root", type=Path, help="Directory to search (a Vector objects/ or ai/staging/ tree)"
+    companion_search.add_argument(
+        "root", type=Path, help="Directory to search (a Companion objects/ or ai/staging/ tree)"
     )
-    vector_search.add_argument(
+    companion_search.add_argument(
         "query", nargs="?", default=None,
         help='Combinable filter query, e.g. "signal:task speaker:Denis meeting:XMFL" '
-             "(see docs/vector-integration.md)",
+             "(see docs/companion-integration.md)",
     )
-    vector_search.add_argument(
+    companion_search.add_argument(
         "--signal", choices=sorted(KNOWN_SIGNALS), default=None,
         help="M01-compatible shorthand for a query of just 'signal:<value>' — omit if "
              "passing a query string",
     )
 
-    vector_signals = vector_subparsers.add_parser(
+    companion_signals = companion_subparsers.add_parser(
         "signals", help="Signal Browser — every Statement grouped by signal"
     )
-    vector_signals.add_argument("root", type=Path, help="Directory to browse")
+    companion_signals.add_argument("root", type=Path, help="Directory to browse")
 
-    vector_summary = vector_subparsers.add_parser(
+    companion_summary = companion_subparsers.add_parser(
         "summary", help="Meeting Summary — signal counts for one Meeting's Statements"
     )
-    vector_summary.add_argument("root", type=Path, help="A Meeting's directory")
+    companion_summary.add_argument("root", type=Path, help="A Meeting's directory")
 
-    vector_stats = vector_subparsers.add_parser(
+    companion_stats = companion_subparsers.add_parser(
         "stats", help="Global Meeting/Statement/signal counts"
     )
-    vector_stats.add_argument("root", type=Path, help="Directory to aggregate over")
+    companion_stats.add_argument("root", type=Path, help="Directory to aggregate over")
 
-    # Reader M03 — Object Navigation. Beyond vector-reader-contract.md v1.0's
-    # stated (Statement-only) scope — see vector_integration/navigation.py's
+    # Reader M03 — Object Navigation. Beyond companion-reader-contract.md v1.0's
+    # stated (Statement-only) scope — see companion_integration/navigation.py's
     # module docstring and READER_M03.md.
-    vector_object = vector_subparsers.add_parser(
+    companion_object = companion_subparsers.add_parser(
         "object", help="Object View — type, name, linked Statements, meetings, aliases, relationships"
     )
-    vector_object.add_argument("root", type=Path, help="Vector repository root (objects/ and/or ai/staging/)")
-    vector_object.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
+    companion_object.add_argument("root", type=Path, help="Companion repository root (objects/ and/or ai/staging/)")
+    companion_object.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
-    vector_mentioned_in = vector_subparsers.add_parser(
+    companion_mentioned_in = companion_subparsers.add_parser(
         "mentioned-in", help="Cross-Meeting View — every Meeting whose Statements mention this object"
     )
-    vector_mentioned_in.add_argument("root", type=Path, help="Vector repository root")
-    vector_mentioned_in.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
+    companion_mentioned_in.add_argument("root", type=Path, help="Companion repository root")
+    companion_mentioned_in.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
-    vector_relationships = vector_subparsers.add_parser(
+    companion_relationships = companion_subparsers.add_parser(
         "relationships", help="Relationship Browser — text tree of this object's relationships"
     )
-    vector_relationships.add_argument("root", type=Path, help="Vector repository root")
-    vector_relationships.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
+    companion_relationships.add_argument("root", type=Path, help="Companion repository root")
+    companion_relationships.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
-    vector_timeline = vector_subparsers.add_parser(
+    companion_timeline = companion_subparsers.add_parser(
         "timeline", help="Entity Timeline — mentions grouped by Meeting, sorted by meeting_date"
     )
-    vector_timeline.add_argument("root", type=Path, help="Vector repository root")
-    vector_timeline.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
+    companion_timeline.add_argument("root", type=Path, help="Companion repository root")
+    companion_timeline.add_argument("object_id", help="Object id, e.g. PTN-00000000-DEMO")
 
     # Reader M04 — Promotion Review UI (READER_M04_DESIGN.md). Deliberately
     # named "review", not "promotion" or "candidates" — Reader displays,
     # it never promotes or decides. Groups by the existing, single-valued
     # statement_kind field only; never a detected_signals combination.
-    vector_review = vector_subparsers.add_parser(
+    companion_review = companion_subparsers.add_parser(
         "review", help="Promotion Review — Statements grouped by statement_kind, for a human to review"
     )
-    vector_review.add_argument("root", type=Path, help="Vector repository root")
+    companion_review.add_argument("root", type=Path, help="Companion repository root")
 
     return parser
 
@@ -311,18 +311,18 @@ def _resolve_repo_path(args: argparse.Namespace, workspace: WorkspaceManager) ->
     return Path(".")
 
 
-def _run_vector_command(args: argparse.Namespace) -> int:
+def _run_companion_command(args: argparse.Namespace) -> int:
     """Reader M01 — Contract Compliance. Independent of --repo/workspace: a
-    Vector repository is a separate, external input (see vector_integration/)."""
-    if args.vector_command == "show":
+    Companion repository is a separate, external input (see companion_integration/)."""
+    if args.companion_command == "show":
         data = parse_frontmatter(args.path)
         if not data or data.get("type") != "statement":
-            print(f"Error: {args.path} is not a Vector Statement object", file=sys.stderr)
+            print(f"Error: {args.path} is not a Companion Statement object", file=sys.stderr)
             return 1
         try:
-            stmt = VectorStatement.model_validate(data)
+            stmt = CompanionStatement.model_validate(data)
         except ValidationError as exc:
-            print(f"Error: {args.path} does not satisfy vector-reader-contract.md: {exc}",
+            print(f"Error: {args.path} does not satisfy companion-reader-contract.md: {exc}",
                   file=sys.stderr)
             return 1
         print(render_statement(stmt))
@@ -332,18 +332,18 @@ def _run_vector_command(args: argparse.Namespace) -> int:
             print(render_mentions(stmt, objects))
         return 0
 
-    if args.vector_command == "search":
+    if args.companion_command == "search":
         if args.query and args.signal:
             print(
                 "Error: pass either a query string or --signal, not both "
-                "(see docs/vector-integration.md)",
+                "(see docs/companion-integration.md)",
                 file=sys.stderr,
             )
             return 1
         statements = load_statements(args.root)
         try:
             if args.query:
-                matches = vector_query_search(statements, args.query)
+                matches = companion_query_search(statements, args.query)
             elif args.signal:
                 matches = filter_by_signal(statements, args.signal)
             else:
@@ -359,21 +359,21 @@ def _run_vector_command(args: argparse.Namespace) -> int:
             print(f"[{stmt.id}] {stmt.title}")
         return 0
 
-    if args.vector_command == "signals":
+    if args.companion_command == "signals":
         statements = load_statements(args.root)
         print(render_signal_browser(statements))
         return 0
 
-    if args.vector_command == "summary":
+    if args.companion_command == "summary":
         statements = load_statements(args.root)
         print(render_meeting_summary(statements))
         return 0
 
-    if args.vector_command == "stats":
+    if args.companion_command == "stats":
         print(render_stats(compute_stats(args.root)))
         return 0
 
-    if args.vector_command == "object":
+    if args.companion_command == "object":
         objects = load_objects(args.root)
         obj = find_object(objects, args.object_id)
         if obj is None:
@@ -384,7 +384,7 @@ def _run_vector_command(args: argparse.Namespace) -> int:
         print(render_object_view(obj, statements, objects))
         return 0
 
-    if args.vector_command == "mentioned-in":
+    if args.companion_command == "mentioned-in":
         objects = load_objects(args.root)
         obj = find_object(objects, args.object_id)
         if obj is None:
@@ -395,7 +395,7 @@ def _run_vector_command(args: argparse.Namespace) -> int:
         print(render_cross_meeting_view(obj, statements, meetings))
         return 0
 
-    if args.vector_command == "relationships":
+    if args.companion_command == "relationships":
         objects = load_objects(args.root)
         obj = find_object(objects, args.object_id)
         if obj is None:
@@ -404,7 +404,7 @@ def _run_vector_command(args: argparse.Namespace) -> int:
         print(render_relationship_tree(obj, objects))
         return 0
 
-    if args.vector_command == "timeline":
+    if args.companion_command == "timeline":
         objects = load_objects(args.root)
         obj = find_object(objects, args.object_id)
         if obj is None:
@@ -415,7 +415,7 @@ def _run_vector_command(args: argparse.Namespace) -> int:
         print(render_entity_timeline(obj, statements, meetings))
         return 0
 
-    if args.vector_command == "review":
+    if args.companion_command == "review":
         meetings = load_meetings(args.root)
         statements = filter_to_current_meetings(load_statements(args.root), meetings)
         print(render_promotion_review(statements, meetings))
@@ -532,8 +532,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(render_completion_script(args.shell))
         return 0
 
-    if args.command == "vector":
-        return _run_vector_command(args)
+    if args.command == "companion":
+        return _run_companion_command(args)
 
     is_tty = sys.stdout.isatty()
     rich = is_tty and not args.plain

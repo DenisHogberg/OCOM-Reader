@@ -1,5 +1,5 @@
-"""Reader M02 — `ocom-reader vector stats`: global counts across every Meeting
-and Statement found under a Vector repository path.
+"""Reader M02 — `ocom-reader companion stats`: global counts across every Meeting
+and Statement found under a Companion repository path.
 
 Reports all five signals from SIGNAL_DISPLAY_ORDER, including `decision` —
 the requested example output happened to omit a Decisions line, but Decision
@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ocom_reader.vector_integration.loader import load_meetings, load_statements
-from ocom_reader.vector_integration.models import SIGNAL_DISPLAY_ORDER
-from ocom_reader.vector_integration.signals import signal_counts
+from ocom_reader.companion_integration.loader import load_meetings, load_statements
+from ocom_reader.companion_integration.models import SIGNAL_DISPLAY_ORDER
+from ocom_reader.companion_integration.signals import signal_counts
 
 _SIGNAL_LABELS = {
     "task": "Tasks",

@@ -1,5 +1,5 @@
 """Reader M01 (Contract Compliance) and M02 (Signal Explorer) —
-docs/contracts/vector-reader-contract.md (published by Vector, Contract
+docs/contracts/companion-reader-contract.md (published by Companion, Contract
 Version 1.0) plus the summary/browser/query/stats layer M02 builds on top of it.
 
 Four kinds of coverage: the models/loader/signals modules in isolation against
@@ -7,7 +7,7 @@ synthetic fixtures (old-style Statement with no detected_signals, new-style
 with it, and an unknown extra field that must be ignored, not rejected); the
 per-signal-not-combination discipline the contract requires, now also for
 combinable signal:/speaker:/meeting: queries (M02 Task 5); one real
-integration test reading Vector's own actual, already-ingested M07 validation
+integration test reading Companion's own actual, already-ingested M07 validation
 data directly from disk (not a copy) — both pre- and post-detected_signals
 Statements genuinely exist there side by side; and M02's new summary/browser/
 stats rendering, checked both structurally and against real data.
@@ -20,20 +20,20 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ocom_reader.vector_integration.loader import (
+from ocom_reader.companion_integration.loader import (
     find_current_meetings,
     load_meetings,
     load_objects,
     load_statements,
     parse_frontmatter,
 )
-from ocom_reader.vector_integration.models import (
+from ocom_reader.companion_integration.models import (
     SIGNAL_DISPLAY_ORDER,
-    VectorMeeting,
-    VectorObject,
-    VectorStatement,
+    CompanionMeeting,
+    CompanionObject,
+    CompanionStatement,
 )
-from ocom_reader.vector_integration.navigation import (
+from ocom_reader.companion_integration.navigation import (
     filter_to_current_meetings,
     find_object,
     linked_meeting_ids,
@@ -46,16 +46,16 @@ from ocom_reader.vector_integration.navigation import (
     render_object_view,
     render_relationship_tree,
 )
-from ocom_reader.vector_integration.promotion import (
+from ocom_reader.companion_integration.promotion import (
     ALWAYS_SHOWN_GROUPS,
     UNCLASSIFIED,
     UNKNOWN_MEETING_LABEL,
     group_by_statement_kind,
     render_promotion_review,
 )
-from ocom_reader.vector_integration.query import apply_filters, parse_query
-from ocom_reader.vector_integration.query import search as vector_search
-from ocom_reader.vector_integration.signals import (
+from ocom_reader.companion_integration.query import apply_filters, parse_query
+from ocom_reader.companion_integration.query import search as companion_search
+from ocom_reader.companion_integration.signals import (
     filter_by_signal,
     multi_signal_count,
     render_meeting_summary,
@@ -64,16 +64,16 @@ from ocom_reader.vector_integration.signals import (
     signal_counts,
     zero_signal_count,
 )
-from ocom_reader.vector_integration.stats import compute_stats, render_stats
+from ocom_reader.companion_integration.stats import compute_stats, render_stats
 
-# Vector's own repository, read directly — not copied into this repo's fixtures.
-# Reader M01 exists specifically to prove Reader can consume Vector's real output
+# Companion's own repository, read directly — not copied into this repo's fixtures.
+# Reader M01 exists specifically to prove Reader can consume Companion's real output
 # without either repository changing to accommodate the other.
-VECTOR_REPO = Path("/Users/mac/Downloads/Vector")
+COMPANION_REPO = Path("/Users/mac/Downloads/Vector")  # actual on-disk directory name, unchanged
 
 
 def _write_statement(tmp_path: Path, name: str, extra_frontmatter: str = "") -> Path:
-    # load_statements() only globs "STM-*.md" (mirroring Vector's own naming
+    # load_statements() only globs "STM-*.md" (mirroring Companion's own naming
     # convention, docs/identifiers-and-naming.md) — test filenames must match.
     if not name.startswith("STM-"):
         name = f"STM-{name}"
@@ -83,7 +83,7 @@ def _write_statement(tmp_path: Path, name: str, extra_frontmatter: str = "") -> 
         "id: STM-20260101-TEST\n"
         "type: statement\n"
         "title: \"a test statement\"\n"
-        "tenant: vector-primary\n"
+        "tenant: companion-primary\n"
         "owner: \"Unassigned\"\n"
         "status: Active\n"
         "lifecycle: none\n"
@@ -149,18 +149,18 @@ def test_unknown_field_is_ignored_not_rejected(tmp_path: Path) -> None:
     Reader has never heard of must not cause a validation error."""
     path = _write_statement(
         tmp_path, "future.md",
-        extra_frontmatter="some_future_field_vector_might_add: {nested: true}\n",
+        extra_frontmatter="some_future_field_companion_might_add: {nested: true}\n",
     )
     data = parse_frontmatter(path)
     assert data is not None
-    stmt = VectorStatement.model_validate(data)  # must not raise
-    assert not hasattr(stmt, "some_future_field_vector_might_add")
+    stmt = CompanionStatement.model_validate(data)  # must not raise
+    assert not hasattr(stmt, "some_future_field_companion_might_add")
 
 
 def test_non_statement_markdown_is_skipped_not_errored(tmp_path: Path) -> None:
-    """README.md / REVIEW.md and any other non-Vector-object Markdown sitting
+    """README.md / REVIEW.md and any other non-Companion-object Markdown sitting
     alongside real Statements must never abort loading the real ones."""
-    (tmp_path / "README.md").write_text("# Not a Vector object\n")
+    (tmp_path / "README.md").write_text("# Not a Companion object\n")
     _write_statement(tmp_path, "STM-real.md")
     statements = load_statements(tmp_path)
     assert len(statements) == 1
@@ -228,7 +228,7 @@ def test_render_statement_full_signal_view(tmp_path: Path) -> None:
 
 
 def test_render_statement_with_no_signals() -> None:
-    stmt = VectorStatement.model_validate(
+    stmt = CompanionStatement.model_validate(
         {
             "id": "STM-1", "type": "statement", "title": "t", "tenant": "x", "owner": "o",
             "status": "Active", "lifecycle": "none", "language": "en", "created": "2026-01-01",
@@ -259,20 +259,20 @@ def test_find_current_meetings_excludes_superseded(tmp_path: Path) -> None:
     assert [m.id for m in current] == ["MTG-NEW"]
 
 
-# --- Real integration test: Vector's own actual M07 data, read live from disk ---
+# --- Real integration test: Companion's own actual M07 data, read live from disk ---
 
-pytestmark_real_vector = pytest.mark.skipif(
-    not VECTOR_REPO.exists(), reason="Vector repository not present at expected path"
+pytestmark_real_companion = pytest.mark.skipif(
+    not COMPANION_REPO.exists(), reason="Companion repository not present at expected path"
 )
 
 
-@pytestmark_real_vector
-def test_reads_all_real_vector_meetings_old_and_new_style() -> None:
+@pytestmark_real_companion
+def test_reads_all_real_companion_meetings_old_and_new_style() -> None:
     """Task 6 — compatibility check against real data: every Meeting/Statement
-    Vector has actually produced across M01-M07, old-style (no
+    Companion has actually produced across M01-M07, old-style (no
     detected_signals) and new-style (with it) side by side in the same
     staging directory tree, loads without error."""
-    staging_root = VECTOR_REPO / "ai" / "staging"
+    staging_root = COMPANION_REPO / "ai" / "staging"
     meetings = load_meetings(staging_root)
     statements = load_statements(staging_root)
 
@@ -282,29 +282,29 @@ def test_reads_all_real_vector_meetings_old_and_new_style() -> None:
     has_no_signals_field = [s for s in statements if s.detected_signals == []]
     has_signals_field = [s for s in statements if s.detected_signals]
     # Both old-style (pre-M04.3, or simply no signals detected) and populated
-    # Statements coexist in Vector's real staging tree.
+    # Statements coexist in Companion's real staging tree.
     assert has_signals_field, "expected at least some real Statements with detected_signals"
     assert has_no_signals_field, "expected at least some real Statements without any signal"
 
 
-@pytestmark_real_vector
-def test_reads_real_vector_production_objects() -> None:
+@pytestmark_real_companion
+def test_reads_real_companion_production_objects() -> None:
     """Meetings/Statements are only ever in ai/staging/ in this repository so
     far (nothing has been promoted to objects/ yet) — but objects/ must still
     load cleanly (zero results, not an error) per the contract's tolerance for
-    an empty or non-Vector-Statement tree."""
-    objects_root = VECTOR_REPO / "objects"
+    an empty or non-Companion-Statement tree."""
+    objects_root = COMPANION_REPO / "objects"
     statements = load_statements(objects_root)  # must not raise
     assert statements == []
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_signal_filter_against_real_data_matches_known_counts() -> None:
     """Cross-check against ai/pipelines/M06_RESULTS.md's own reported number for
     this exact Meeting (task_signal count 7, detected 'task' signal count 17,
     post-M06 parser_version 1.4.0) — proving Reader's independent
-    reimplementation agrees with Vector's own analysis of the same file."""
-    meeting_dir = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    reimplementation agrees with Companion's own analysis of the same file."""
+    meeting_dir = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
     if not meeting_dir.exists():
         pytest.skip("expected real M06/M07 staging run not present")
     statements = load_statements(meeting_dir)
@@ -312,12 +312,12 @@ def test_signal_filter_against_real_data_matches_known_counts() -> None:
     assert len(task_hits) == 17
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_find_current_meetings_against_real_supersedes_chain() -> None:
     """The real transcript was reprocessed multiple times across M03-M06
     (source_hash unchanged, parser_version bumped each time); exactly one
     Meeting in that chain must be current."""
-    staging_root = VECTOR_REPO / "ai" / "staging"
+    staging_root = COMPANION_REPO / "ai" / "staging"
     meetings = load_meetings(staging_root)
     same_source = [m for m in meetings if m.source_hash and m.source_hash.startswith(
         "sha256:700049850974"
@@ -333,8 +333,8 @@ def test_find_current_meetings_against_real_supersedes_chain() -> None:
 def _stmt(
     id_, signals=(), speaker="Speaker 1", meeting_ref="MTG-X", text="hi", references=(),
     kind=None, timestamp="00:01",
-) -> VectorStatement:
-    return VectorStatement.model_validate(
+) -> CompanionStatement:
+    return CompanionStatement.model_validate(
         {
             "id": id_, "type": "statement", "title": text, "tenant": "x", "owner": "o",
             "status": "Active", "lifecycle": "none", "language": "en", "created": "2026-01-01",
@@ -407,10 +407,10 @@ def test_query_parse_and_apply_combines_filters() -> None:
     ]
     assert parse_query("signal:task speaker:Denis") == {"signal": "task", "speaker": "Denis"}
 
-    only_signal = vector_search(stmts, "signal:task")
+    only_signal = companion_search(stmts, "signal:task")
     assert {s.id for s in only_signal} == {"1", "2"}
 
-    signal_and_speaker = vector_search(stmts, "signal:task speaker:Denis")
+    signal_and_speaker = companion_search(stmts, "signal:task speaker:Denis")
     assert {s.id for s in signal_and_speaker} == {"1"}  # narrower than either filter alone
 
     signal_and_meeting = apply_filters(stmts, {"signal": "task", "meeting": "AAA"})
@@ -440,32 +440,32 @@ def test_compute_and_render_stats() -> None:
     assert "Questions\n\n0" in rendered
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_meeting_summary_against_real_data_matches_m06_numbers() -> None:
     """Cross-check against M06_RESULTS.md's own reported numbers for this
     exact Meeting post-M06 fixes (Zero-signal 43%, Multi-signal 23%)."""
-    stmts = load_statements(VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL")
+    stmts = load_statements(COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL")
     assert zero_signal_count(stmts) == 42
     assert multi_signal_count(stmts) == 23
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_stats_against_real_full_staging_tree() -> None:
-    """Global stats over Vector's entire real ai/staging/ tree must not error
+    """Global stats over Companion's entire real ai/staging/ tree must not error
     and must report at least as many Statements as any single Meeting."""
-    stats = compute_stats(VECTOR_REPO / "ai" / "staging")
+    stats = compute_stats(COMPANION_REPO / "ai" / "staging")
     assert stats["meetings"] >= 10
     assert stats["statements"] > 500
     assert all(stats[sig] >= 0 for sig in SIGNAL_DISPLAY_ORDER)
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_combined_query_against_real_data() -> None:
     """signal: + meeting: combined must narrow strictly to the intersection —
     fewer or equal results than either filter alone."""
-    stmts = load_statements(VECTOR_REPO / "ai" / "staging")
+    stmts = load_statements(COMPANION_REPO / "ai" / "staging")
     signal_only = filter_by_signal(stmts, "risk")
-    combined = vector_search(stmts, "signal:risk meeting:XMFL")
+    combined = companion_search(stmts, "signal:risk meeting:XMFL")
     assert 0 < len(combined) <= len(signal_only)
     assert all(s.has_signal("risk") for s in combined)
     assert all("XMFL" in s.meeting_ref for s in combined)
@@ -473,19 +473,19 @@ def test_combined_query_against_real_data() -> None:
 
 # --- Reader M03 — Object Navigation -----------------------------------------
 #
-# Two kinds of coverage, for a reason documented in READER_M03.md: Vector's
+# Two kinds of coverage, for a reason documented in READER_M03.md: Companion's
 # real objects (6 real Partner/Employee records) have zero populated
 # `relationships` and zero `alias:` tags today (checked directly, not
 # assumed) — so Aliases and the Relationship Browser are exercised here only
 # against synthetic fixtures, while Linked Statements/Mentions/Cross-Meeting
 # View/Timeline (which DO have real reference data behind them) are also
-# checked against Vector's actual ai/staging/MTG-20260727-XMFL.
+# checked against Companion's actual ai/staging/MTG-20260727-XMFL.
 
 def _obj(
     id_, type_="partner", title="T", relationships=(), references=(), tags=(),
     evidence=(), source_type=None,
-) -> VectorObject:
-    return VectorObject.model_validate(
+) -> CompanionObject:
+    return CompanionObject.model_validate(
         {
             "id": id_, "type": type_, "title": title, "tenant": "x", "owner": "o",
             "status": "Active", "lifecycle": "commercial", "confidence": "low", "source": "ai",
@@ -518,7 +518,7 @@ def test_linked_statements_and_meeting_ids() -> None:
 
 def test_render_object_view_with_aliases_and_relationships() -> None:
     """Task 1 — Object View. Uses a synthetic fixture for Aliases/
-    Relationships since no real Vector object has either populated yet."""
+    Relationships since no real Companion object has either populated yet."""
     obj = _obj(
         "PTN-1", title="Jordan",
         relationships=[{"type": "works_with", "target": "CMP-1"}],
@@ -602,8 +602,8 @@ def test_meetings_mentioning_and_cross_meeting_view() -> None:
         _stmt("2", meeting_ref="MTG-B", references=[{"target": "PTN-1"}]),
     ]
     meetings = [
-        VectorMeeting.model_validate({"id": "MTG-A", "type": "meeting", "title": "Meeting A"}),
-        VectorMeeting.model_validate({"id": "MTG-B", "type": "meeting", "title": "Meeting B"}),
+        CompanionMeeting.model_validate({"id": "MTG-A", "type": "meeting", "title": "Meeting A"}),
+        CompanionMeeting.model_validate({"id": "MTG-B", "type": "meeting", "title": "Meeting B"}),
     ]
     found = meetings_mentioning(obj, stmts, meetings)
     assert [m.title for m in found] == ["Meeting A", "Meeting B"]
@@ -646,7 +646,7 @@ def test_render_relationship_tree_skips_unresolvable_target() -> None:
 
 def test_render_entity_timeline_sorts_by_meeting_date() -> None:
     """Task 5 — Entity Timeline. meeting_date is a Reader M03 addition, now
-    part of Contract v1.1's "Meeting" section (see models.VectorMeeting
+    part of Contract v1.1's "Meeting" section (see models.CompanionMeeting
     docstring); undated meetings sort last rather than being dropped."""
     obj = _obj("PTN-1", title="Jordan")
     stmts = [
@@ -656,13 +656,13 @@ def test_render_entity_timeline_sorts_by_meeting_date() -> None:
         _stmt("4", meeting_ref="MTG-UNDATED", references=[{"target": "PTN-1"}]),
     ]
     meetings = [
-        VectorMeeting.model_validate(
+        CompanionMeeting.model_validate(
             {"id": "MTG-LATE", "type": "meeting", "title": "Late Meeting", "meeting_date": "2026-02-01"}
         ),
-        VectorMeeting.model_validate(
+        CompanionMeeting.model_validate(
             {"id": "MTG-EARLY", "type": "meeting", "title": "Early Meeting", "meeting_date": "2026-01-01"}
         ),
-        VectorMeeting.model_validate(
+        CompanionMeeting.model_validate(
             {"id": "MTG-UNDATED", "type": "meeting", "title": "Undated Meeting"}
         ),
     ]
@@ -678,11 +678,11 @@ def test_render_entity_timeline_sorts_by_meeting_date() -> None:
 
 def test_filter_to_current_meetings_drops_superseded_reindex_runs() -> None:
     """Discovered against real data: the same real-world meeting reprocessed
-    multiple times (Vector's own idempotent-import supersedes chain) must
+    multiple times (Companion's own idempotent-import supersedes chain) must
     not be counted as several different meetings when aggregating a Statement
     count or a Cross-Meeting View / Timeline."""
-    old_meeting = VectorMeeting.model_validate({"id": "MTG-OLD", "type": "meeting", "title": "T"})
-    new_meeting = VectorMeeting.model_validate(
+    old_meeting = CompanionMeeting.model_validate({"id": "MTG-OLD", "type": "meeting", "title": "T"})
+    new_meeting = CompanionMeeting.model_validate(
         {
             "id": "MTG-NEW", "type": "meeting", "title": "T",
             "relationships": [{"type": "supersedes", "target": "MTG-OLD"}],
@@ -696,12 +696,12 @@ def test_filter_to_current_meetings_drops_superseded_reindex_runs() -> None:
     assert [s.id for s in filtered] == ["2"]
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_object_view_for_a_real_partner() -> None:
     """Cross-checks the two real references into PTN-20260727-A1NG confirmed
     directly (grep) in ai/staging/MTG-20260727-XMFL before writing this test."""
-    root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
-    objects = load_objects(VECTOR_REPO / "objects")
+    root = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    objects = load_objects(COMPANION_REPO / "objects")
     obj = find_object(objects, "PTN-20260727-A1NG")
     assert obj is not None
     statements = load_statements(root)
@@ -720,10 +720,10 @@ def test_real_object_view_for_a_real_partner() -> None:
     assert "Evidence:\nhuman_verification — EVD-20260728-6HFR" in rendered
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_cross_meeting_view_for_a_real_employee() -> None:
-    root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
-    objects = load_objects(VECTOR_REPO / "objects")
+    root = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    objects = load_objects(COMPANION_REPO / "objects")
     obj = find_object(objects, "EMP-20260727-O1EG")
     assert obj is not None
     statements = load_statements(root)
@@ -733,12 +733,12 @@ def test_real_cross_meeting_view_for_a_real_employee() -> None:
     assert [m.id for m in found] == ["MTG-20260727-XMFL"]
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_mentions_from_a_real_statement() -> None:
     """Reverse Navigation against a real Statement known (via grep) to
     reference PTN-20260727-A1NG."""
-    root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
-    objects = load_objects(VECTOR_REPO / "objects")
+    root = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    objects = load_objects(COMPANION_REPO / "objects")
     statements = load_statements(root)
     referencing = [s for s in statements if any(r.get("target") == "PTN-20260727-A1NG" for r in s.references)]
     assert referencing, "expected at least one real Statement referencing PTN-20260727-A1NG"
@@ -746,7 +746,7 @@ def test_real_mentions_from_a_real_statement() -> None:
     assert any(o.id == "PTN-20260727-A1NG" for o in found)
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_filter_to_current_meetings_collapses_reindex_chain() -> None:
     """The bug this filter fixes, reproduced against real data: loading the
     FULL ai/staging/ tree (not one scoped meeting directory) sees the same
@@ -754,8 +754,8 @@ def test_real_filter_to_current_meetings_collapses_reindex_chain() -> None:
     Without filtering, this object's Linked Statements/Meetings would be
     overcounted by that factor; with it, the real counts match the
     single-directory test above exactly (2 statements, 1 meeting)."""
-    staging_root = VECTOR_REPO / "ai" / "staging"
-    objects = load_objects(VECTOR_REPO / "objects")
+    staging_root = COMPANION_REPO / "ai" / "staging"
+    objects = load_objects(COMPANION_REPO / "objects")
     obj = find_object(objects, "PTN-20260727-A1NG")
     assert obj is not None
     meetings = load_meetings(staging_root)
@@ -766,13 +766,13 @@ def test_real_filter_to_current_meetings_collapses_reindex_chain() -> None:
     assert linked_meeting_ids(linked) == ["MTG-20260727-XMFL"]
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_entity_timeline_uses_real_meeting_date() -> None:
     """MTG-20260727-XMFL's real frontmatter does carry meeting_date (checked
-    directly) — an exception among Vector's Meetings this milestone relies
+    directly) — an exception among Companion's Meetings this milestone relies
     on, flagged in READER_M03.md."""
-    root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
-    objects = load_objects(VECTOR_REPO / "objects")
+    root = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    objects = load_objects(COMPANION_REPO / "objects")
     obj = find_object(objects, "PTN-20260727-A1NG")
     assert obj is not None
     statements = load_statements(root)
@@ -792,11 +792,11 @@ def test_real_entity_timeline_uses_real_meeting_date() -> None:
 # that empty input never errors — the two points explicitly flagged for
 # extra attention alongside the design.
 
-def _meeting(id_, title="T", meeting_date=None) -> VectorMeeting:
+def _meeting(id_, title="T", meeting_date=None) -> CompanionMeeting:
     data = {"id": id_, "type": "meeting", "title": title}
     if meeting_date is not None:
         data["meeting_date"] = meeting_date
-    return VectorMeeting.model_validate(data)
+    return CompanionMeeting.model_validate(data)
 
 
 def test_group_by_statement_kind_buckets_by_exact_value() -> None:
@@ -813,7 +813,7 @@ def test_group_by_statement_kind_buckets_by_exact_value() -> None:
 
 def test_group_by_statement_kind_keeps_unknown_future_value_separate() -> None:
     """A statement_kind value outside the 6 known ones (a hypothetical future
-    Vector enum extension) must get its own bucket, never silently merged
+    Companion enum extension) must get its own bucket, never silently merged
     into 'other' or dropped."""
     stmts = [_stmt("1", kind="task_signal"), _stmt("2", kind="future_kind")]
     grouped = group_by_statement_kind(stmts)
@@ -920,12 +920,12 @@ def test_render_promotion_review_unknown_kind_appended_after_known_groups() -> N
     assert rendered.index("OTHER (0)") < rendered.index("FUTURE_KIND (1)")
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_promotion_review_task_signal_count_matches_known_number() -> None:
     """Cross-check against the same real, independently-confirmed number used
     in READER_M02.md and READER_M04_DESIGN.md: task_signal count 7 for this
     exact Meeting."""
-    root = VECTOR_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
+    root = COMPANION_REPO / "ai" / "staging" / "MTG-20260727-XMFL"
     statements = load_statements(root)
     meetings = load_meetings(root)
     grouped = group_by_statement_kind(statements)
@@ -934,13 +934,13 @@ def test_real_promotion_review_task_signal_count_matches_known_number() -> None:
     assert "TASK (7)" in rendered
 
 
-@pytestmark_real_vector
+@pytestmark_real_companion
 def test_real_promotion_review_against_full_repo_has_no_duplicate_meeting_sections() -> None:
     """The exact bug class M03 found (a real meeting reprocessed 6 times
     appearing as 6 duplicate sections) must not reappear here — this is why
     filter_to_current_meetings is a REQUIRED step, not optional, per
     READER_M04_DESIGN.md."""
-    staging_root = VECTOR_REPO / "ai" / "staging"
+    staging_root = COMPANION_REPO / "ai" / "staging"
     meetings = load_meetings(staging_root)
     statements = filter_to_current_meetings(load_statements(staging_root), meetings)
     rendered = render_promotion_review(statements, meetings)

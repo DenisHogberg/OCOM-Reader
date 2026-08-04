@@ -1,11 +1,11 @@
-"""Vector Statement/Meeting models — Reader's side of
-docs/contracts/vector-reader-contract.md (Vector repository, Contract Version 1.1).
+"""Companion Statement/Meeting models — Reader's side of
+docs/contracts/companion-reader-contract.md (Companion repository, Contract Version 1.1).
 
 Only the fields the contract actually governs are modeled here. `extra="ignore"`
 on both models is the concrete implementation of the contract's "Reader must
 ignore unknown fields" rule — made explicit rather than left to Pydantic's
 implicit default, since this is a stated compatibility promise, not an accident
-of the library. This is what lets Vector add a new optional field (as it already
+of the library. This is what lets Companion add a new optional field (as it already
 did once, adding `detected_signals` in its own M04.3) without breaking Reader.
 """
 
@@ -34,13 +34,13 @@ KNOWN_STATEMENT_KINDS = frozenset(
 # five names as KNOWN_SIGNALS, ordered for stable, predictable output. Not a
 # ranking or a precedence — just a consistent order to render in, independent
 # of insertion order in any particular Statement's detected_signals list (which
-# Vector itself writes alphabetically) or of frozenset iteration order (which
+# Companion itself writes alphabetically) or of frozenset iteration order (which
 # is not guaranteed stable across runs).
 SIGNAL_DISPLAY_ORDER = ("task", "metric", "risk", "decision", "question")
 
 
-class VectorStatement(BaseModel):
-    """A Vector Statement object, per the contract's "Mandatory fields" and
+class CompanionStatement(BaseModel):
+    """A Companion Statement object, per the contract's "Mandatory fields" and
     "Optional fields" sections. Fields not listed in either section of the
     contract are not modeled here at all — they pass through Pydantic's
     extra="ignore" and are simply never seen by Reader, which is exactly what
@@ -76,7 +76,7 @@ class VectorStatement(BaseModel):
     statement_kind: Optional[str] = None
     metric_value_raw: Optional[str] = None
     # The field this milestone (Reader M01) exists to support. Absent on any
-    # Statement produced before Vector's PARSER_VERSION 1.3.0, or on a
+    # Statement produced before Companion's PARSER_VERSION 1.3.0, or on a
     # manually-authored one — default to an empty list, never None, so a
     # caller never needs a None-check before iterating or filtering it.
     detected_signals: list[str] = Field(default_factory=list)
@@ -88,8 +88,8 @@ class VectorStatement(BaseModel):
         return signal in self.detected_signals
 
 
-class VectorMeeting(BaseModel):
-    """The subset of a Vector Meeting object this contract governs directly —
+class CompanionMeeting(BaseModel):
+    """The subset of a Companion Meeting object this contract governs directly —
     per Contract v1.1's "Meeting" section: identity, parser_version, the
     supersedes relationship, and meeting_date. Everything else about Meeting
     (attendees, meeting_type, location, duration_minutes, recording_uri,
@@ -104,8 +104,8 @@ class VectorMeeting(BaseModel):
     offset within the recording). Originally read ahead of any contract
     covering it (flagged as a "beyond Contract v1.0" exception at the time);
     formally part of the contract as of v1.1 — see
-    docs/contracts/vector-reader-contract.md's "Meeting" section and
-    docs/vector-integration.md. Optional, defaults to None, so a Meeting
+    docs/contracts/companion-reader-contract.md's "Meeting" section and
+    docs/companion-integration.md. Optional, defaults to None, so a Meeting
     lacking it never breaks anything."""
 
     model_config = ConfigDict(extra="ignore")
@@ -120,7 +120,7 @@ class VectorMeeting(BaseModel):
 
     def supersedes(self) -> list[str]:
         """Meeting ids this Meeting explicitly replaces, per its own
-        `relationships` — the same `supersedes` relationship type Vector's own
+        `relationships` — the same `supersedes` relationship type Companion's own
         M03 pipeline writes. Does not say whether THIS Meeting is itself
         superseded by something newer; see loader.find_current_meetings()."""
         return [
@@ -130,7 +130,7 @@ class VectorMeeting(BaseModel):
         ]
 
 
-# Vector's own type prefixes for non-Statement/Meeting objects, per Vector's
+# Companion's own type prefixes for non-Statement/Meeting objects, per Companion's
 # docs/identifiers-and-naming.md — used only to recognize which `type` values
 # load_objects() should collect, not to parse filenames (type field is
 # authoritative, same discipline as load_statements/load_meetings).
@@ -140,20 +140,20 @@ KNOWN_OBJECT_TYPES = frozenset(
 )
 
 
-class VectorObject(BaseModel):
-    """Any non-Statement/Meeting Vector object (Partner, Company, Employee,
+class CompanionObject(BaseModel):
+    """Any non-Statement/Meeting Companion object (Partner, Company, Employee,
     Task, Decision, Risk, Issue, Document, Project, Product, Evidence) — for
-    Reader M03's Object Navigation. Models Vector's COMMON object frontmatter
-    (Vector's docs/object-model.md) — specifically the 13-field subset Reader
+    Reader M03's Object Navigation. Models Companion's COMMON object frontmatter
+    (Companion's docs/object-model.md) — specifically the 13-field subset Reader
     actually reads, no more — since no type-specific contract for any of
     these (a "Partner contract," an "Employee contract") exists yet.
 
-    Covered by vector-reader-contract.md's "Common Object Schema" section as
+    Covered by companion-reader-contract.md's "Common Object Schema" section as
     of Contract v1.1 — originally flagged (READER_M03.md) as a real gap when
-    only Contract v1.0 (Statement-only) existed; formalized once Vector
-    published the addendum. Deliberately still narrower than Vector's full
+    only Contract v1.0 (Statement-only) existed; formalized once Companion
+    published the addendum. Deliberately still narrower than Companion's full
     common schema: `domain`/`language`/`created`/`updated` are real fields on
-    every Vector object but are not modeled here and not part of the
+    every Companion object but are not modeled here and not part of the
     contract, because Object Navigation has never needed them — adding any
     would be a new, separate contract change when that becomes true, not
     implied by this class already existing."""
@@ -173,17 +173,17 @@ class VectorObject(BaseModel):
     references: list[dict[str, Any]] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
-    # Only meaningful when type == "evidence" (Vector's schemas/evidence.schema.json
+    # Only meaningful when type == "evidence" (Companion's schemas/evidence.schema.json
     # required field) — absent/None on every other type. Frontmatter-only, same as
-    # everything else on this model: Vector's Evidence "## Excerpt" Markdown body
+    # everything else on this model: Companion's Evidence "## Excerpt" Markdown body
     # content is deliberately NOT read here — that's a separate, later decision
     # (see PR-5 pre-flight discussion), not an oversight.
     source_type: Optional[str] = None
 
     def aliases(self) -> list[str]:
         """Registered aliases via the `alias:<form>` tags convention — the
-        exact mechanism Vector's own resolve_entity()/registered_aliases()
+        exact mechanism Companion's own resolve_entity()/registered_aliases()
         (ai/pipelines/ingest_transcript.py) already uses for Identity
-        Resolution. Also not part of vector-reader-contract.md v1.0; same gap
+        Resolution. Also not part of companion-reader-contract.md v1.0; same gap
         as noted on the class docstring above."""
         return [t[len("alias:"):] for t in self.tags if t.startswith("alias:")]

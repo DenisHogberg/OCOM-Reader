@@ -2,7 +2,7 @@
 
 **Status: analysis only. No code, no push, no tag, no GitHub Release created.** Every
 item below was re-verified against the real repository state while writing this
-(fresh `pytest` run, fresh `git status`/`git log`, fresh checks against Vector's real
+(fresh `pytest` run, fresh `git status`/`git log`, fresh checks against Companion's real
 data) — not carried over from earlier turns' memory.
 
 ---
@@ -16,13 +16,13 @@ data) — not carried over from earlier turns' memory.
 | **CI** | ⚠️ Configured, not yet proven on GitHub | `.github/workflows/tests.yml` exists and was verified locally by simulating exactly what it runs (checkout-equivalent + fresh install + `pytest`: 512 passed). **But it has never actually executed on GitHub** — `git log origin/main..HEAD` shows 6 commits, including the one that added this workflow, still unpushed. A workflow that has never run is configured, not yet demonstrated. |
 | **CHANGELOG** | ✅ Present | `CHANGELOG.md` exists, Keep a Changelog format, `## [0.2.0] - 2026-07-27` is the current top entry, includes the "Note on early tags" explaining `v0.1.0`/`v1.0.0`. |
 | **README** | ✅ Present, verified | Redesigned in P04; a real clone→install→run experiment was performed and passed (`READER_README_REVIEW.md`). |
-| **Documentation** | ✅ Present | `docs/vector-integration.md`, `docs/HISTORY.md`, `docs/architecture/` (46 files), `READER_STATUS.md`, `READER_M01.md`-`READER_M04.md` + design review, `READER_ROADMAP_REVIEW.md`, `READER_PRODUCT_READINESS.md`, `READER_LICENSE_REVIEW.md`, `READER_CI_DESIGN.md`. |
+| **Documentation** | ✅ Present | `docs/companion-integration.md`, `docs/HISTORY.md`, `docs/architecture/` (46 files), `READER_STATUS.md`, `READER_M01.md`-`READER_M04.md` + design review, `READER_ROADMAP_REVIEW.md`, `READER_PRODUCT_READINESS.md`, `READER_LICENSE_REVIEW.md`, `READER_CI_DESIGN.md`. |
 | **Tests** | ✅ Present, verified | **512 passed**, re-run fresh just now, zero failures. |
-| **Known limitations** | ✅ Documented | Previously scattered across `READER_STATUS.md`/`docs/vector-integration.md`; consolidated in Section 3 below. |
+| **Known limitations** | ✅ Documented | Previously scattered across `READER_STATUS.md`/`docs/companion-integration.md`; consolidated in Section 3 below. |
 
 **The one real gap this checklist surfaces**: everything above is true of the local
 repository. **None of it is public yet** — `origin/main` does not have any of the
-Vector integration, License, CI, Changelog, or README work. "CI passing" today means
+Companion integration, License, CI, Changelog, or README work. "CI passing" today means
 "passing when simulated locally," not "passing on GitHub," because it has had zero
 opportunity to run there.
 
@@ -35,29 +35,29 @@ Draft text for the GitHub Release, tag `v0.2.0`:
 ### OCOM Reader v0.2.0 — First Public Release
 
 Reader's first release backed by an actual changelog, a real license, and automated
-testing. Two bodies of work land together: the Vector integration (four milestones,
+testing. Two bodies of work land together: the Companion integration (four milestones,
 M01-M04) and a full Product Readiness pass (P01-P04) preparing Reader to be a
 genuinely usable, trustworthy open-source project rather than an internal prototype.
 
-**Vector Integration**
-- Read Vector's Statement/Meeting/object data per a versioned contract
-  (`vector-reader-contract.md` v1.0) — forward/backward compatible by construction.
+**Companion Integration**
+- Read Companion's Statement/Meeting/object data per a versioned contract
+  (`companion-reader-contract.md` v1.0) — forward/backward compatible by construction.
 - Search and browse by signal, independently or combined with speaker/meeting filters.
 - Navigate objects: view an object's linked Statements/Meetings/aliases/relationships,
   see what a Statement mentions, cross-meeting views, a relationship tree, a
   chronological timeline.
 - A Promotion Review queue, grouping Statements by `statement_kind` for human review —
-  deliberately never inventing a richer classification Vector hasn't itself produced.
-- 10 new `ocom-reader vector` subcommands in total.
+  deliberately never inventing a richer classification Companion hasn't itself produced.
+- 10 new `ocom-reader companion` subcommands in total.
 
 **Product Readiness**
 - **License**: Apache License, Version 2.0.
 - **CI**: automated test verification on every push/PR (GitHub Actions).
 - **Changelog**: `CHANGELOG.md`, Keep a Changelog format, from this release forward.
 - **README**: rewritten around a five-minute-test — clone, install, run, point at a
-  Vector repository, get a useful result, without needing to open any other document.
+  Companion repository, get a useful result, without needing to open any other document.
 
-**Compatibility**: this release is intended for existing Vector repositories on
+**Compatibility**: this release is intended for existing Companion repositories on
 Contract v1.0. See "Compatibility" below for the two fields read beyond that
 contract's formal scope.
 
@@ -65,34 +65,34 @@ contract's formal scope.
 discovered later.
 
 Full details: [`CHANGELOG.md`](CHANGELOG.md) · [`READER_STATUS.md`](READER_STATUS.md)
-· [`docs/vector-integration.md`](docs/vector-integration.md)
+· [`docs/companion-integration.md`](docs/companion-integration.md)
 
 ---
 
 ## 3. Known Limitations
 
-Consolidated from `READER_STATUS.md` and re-checked directly against Vector's real
+Consolidated from `READER_STATUS.md` and re-checked directly against Companion's real
 data while writing this document, not assumed unchanged:
 
-- **Two fields read beyond Vector Contract v1.0's formal scope**: `Meeting.meeting_date`
+- **Two fields read beyond Companion Contract v1.0's formal scope**: `Meeting.meeting_date`
   (used for chronological ordering in Entity Timeline and Promotion Review) and the
-  common `VectorObject` schema Object Navigation relies on. Both optional, both
+  common `CompanionObject` schema Object Navigation relies on. Both optional, both
   degrade gracefully to `(none)`/`(date unknown)` if absent — but neither is a
   contractual guarantee yet. See Section 4.
-- **`relationships` and `alias:` tags are unpopulated in real Vector data.**
+- **`relationships` and `alias:` tags are unpopulated in real Companion data.**
   Re-checked just now: all 6 real objects (`objects/partners/`, `objects/employees/`)
   still have `relationships: []` and zero `alias:` tags. The Relationship Browser and
   Object View's Aliases section are correct and tested (synthetic fixtures), but have
   nothing real to display yet.
-- **No real Promotion Candidate data exists in Vector at all** — re-confirmed: no
-  schema, no persisted object, nothing beyond Vector's own analysis-only
-  `M05_PROMOTION_READINESS.md`. `vector review` groups by `statement_kind` only,
+- **No real Promotion Candidate data exists in Companion at all** — re-confirmed: no
+  schema, no persisted object, nothing beyond Companion's own analysis-only
+  `M05_PROMOTION_READINESS.md`. `companion review` groups by `statement_kind` only,
   deliberately, per the binding Design Principle established in M04.
-- **Speaker identity is unresolved on Vector's side** — re-confirmed:
+- **Speaker identity is unresolved on Companion's side** — re-confirmed:
   `speaker_resolved: false` on every real Statement checked. `speaker:` search works
-  correctly but won't match a real name until Vector resolves this itself.
-- **Real Vector data is still narrow**: a single tenant (`vector-primary`) has ever
-  been observed; only 2 of Vector's 12 object types (`partners`, `employees`) have any
+  correctly but won't match a real name until Companion resolves this itself.
+- **Real Companion data is still narrow**: a single tenant (`companion-primary`) has ever
+  been observed; only 2 of Companion's 12 object types (`partners`, `employees`) have any
   real production data. Multi-tenant behavior and most object types are exercised only
   by synthetic fixtures.
 - **Runtime dependencies are unpinned** (`pydantic>=2.0`, `pyyaml>=6.0`, no upper
@@ -108,20 +108,20 @@ milestone or Product Readiness item that surfaced it.
 
 ## 4. Compatibility
 
-**Reader is compatible with Vector Contract v1.0, plus two explicitly flagged,
+**Reader is compatible with Companion Contract v1.0, plus two explicitly flagged,
 temporary extensions beyond it**, not silently assumed stable:
 
 - **Fully covered by Contract v1.0**: `Statement`'s mandatory and optional fields
   (including `detected_signals`, `statement_kind`), and the two `Meeting` fields
   (`source_hash`, `parser_version`) the supersedes chain relies on.
 - **Beyond Contract v1.0, read defensively**: `Meeting.meeting_date` and the
-  `VectorObject` common-object schema. Both optional; both documented in
-  `docs/vector-integration.md`'s "Supported contract version" section with an explicit
-  recommendation that Vector formally address them (a v1.1 addendum, or a second
+  `CompanionObject` common-object schema. Both optional; both documented in
+  `docs/companion-integration.md`'s "Supported contract version" section with an explicit
+  recommendation that Companion formally address them (a v1.1 addendum, or a second
   contract for the common object schema).
-- **Never assumed**: any Vector field or object type not explicitly modeled in
-  `vector_integration/models.py` is silently ignored (`extra="ignore"`), not rejected —
-  a future Vector field addition cannot break this integration.
+- **Never assumed**: any Companion field or object type not explicitly modeled in
+  `companion_integration/models.py` is silently ignored (`extra="ignore"`), not rejected —
+  a future Companion field addition cannot break this integration.
 
 ## 5. Final Recommendation
 
@@ -134,8 +134,8 @@ is genuinely done and independently verified in this document and its predecesso
 (`READER_PRODUCT_READINESS.md` through `READER_README_REVIEW.md`), not merely
 asserted. Known limitations are all disclosed, all bounded, and none of them block a
 real user from getting real value today (Signal Explorer, Object Navigation, and
-Promotion Review all work against real Vector data right now; only the Relationship
-Browser and Aliases display have nothing real to show yet, and that's a Vector-data
+Promotion Review all work against real Companion data right now; only the Relationship
+Browser and Aliases display have nothing real to show yet, and that's a Companion-data
 gap, not a Reader defect).
 
 **The one thing that genuinely blocks calling this "released" is not a code or

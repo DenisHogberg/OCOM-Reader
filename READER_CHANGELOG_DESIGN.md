@@ -44,7 +44,7 @@ Agent v0.1 architecture design", `20a2196` "implement OCOM end-to-end reasoning 
 v0.1") — a track that used semver-shaped tag names loosely, disagreed with its own
 commit messages, and was abandoned (zero tags since, across 15 further substantial
 commits including the entire Reader MVP, extensibility architecture, Web UI, LLM
-layer, Memory Layer, and this session's Vector integration). `pyproject.toml`'s
+layer, Memory Layer, and this session's Companion integration). `pyproject.toml`'s
 untouched `"0.1.0"` is, ironically, the more honest artifact of the two: it never
 claimed a stability level the project hadn't earned.
 
@@ -68,7 +68,7 @@ used unbroken since inception, and that `v0.1.0` (the annotated, more deliberate
 the two tags) already matches, is the throughline that's actually been consistent.
 
 **A closely related, separate finding worth flagging for the Changelog Strategy
-below**: this session's own Vector-integration work was tracked as "Reader M01-M04."
+below**: this session's own Companion-integration work was tracked as "Reader M01-M04."
 The *original* Reader pipeline has its own, older, unrelated milestone numbering that
 reached **M021** (Memory Layer, `586d74b`) before this session began. "M01"-"M04" in
 this session's `READER_M0X.md` reports and this session's commits **numerically
@@ -101,7 +101,7 @@ just accepted by default):
 
 ## 3. Milestone Mapping
 
-Scoped to this session's own, currently-active milestone track (Vector integration +
+Scoped to this session's own, currently-active milestone track (Companion integration +
 Product Readiness) — the track the CHANGELOG's first real version will actually
 describe. The pre-existing M006-M021 track (Reader MVP through Memory Layer) is real,
 substantial prior work, but predates this Product Readiness sequence and predates any
@@ -111,10 +111,10 @@ against a version number that didn't exist yet when it shipped.
 
 | Milestone | Real changes (checked against commits/reports) |
 |---|---|
-| M01 — Contract Compliance | Reader reads Vector's Statement/Meeting objects per `vector-reader-contract.md` v1.0; forward/backward compatible (`extra="ignore"`, safe optional-field defaults). `vector show`/`vector search --signal`. |
-| M02 — Signal Explorer | Meeting Summary, Signal Browser, full Signal View, combinable `signal:`/`speaker:`/`meeting:` search, global `vector stats`. |
-| M03 — Object Navigation | `vector object`/`mentioned-in`/`relationships`/`timeline`; introduces (and explicitly flags as beyond Contract v1.0) `VectorObject` and `Meeting.meeting_date`; found and fixed a real reindex-duplication bug (`filter_to_current_meetings`). |
-| M04 — Promotion Review UI | `vector review` — Statements grouped by `statement_kind` only, no signal-combination classification (binding Design Principle established here for all future work). |
+| M01 — Contract Compliance | Reader reads Companion's Statement/Meeting objects per `companion-reader-contract.md` v1.0; forward/backward compatible (`extra="ignore"`, safe optional-field defaults). `companion show`/`companion search --signal`. |
+| M02 — Signal Explorer | Meeting Summary, Signal Browser, full Signal View, combinable `signal:`/`speaker:`/`meeting:` search, global `companion stats`. |
+| M03 — Object Navigation | `companion object`/`mentioned-in`/`relationships`/`timeline`; introduces (and explicitly flags as beyond Contract v1.0) `CompanionObject` and `Meeting.meeting_date`; found and fixed a real reindex-duplication bug (`filter_to_current_meetings`). |
+| M04 — Promotion Review UI | `companion review` — Statements grouped by `statement_kind` only, no signal-combination classification (binding Design Principle established here for all future work). |
 | P01 — Licensing | Added `LICENSE` (Apache-2.0); `pyproject.toml` `license`/`classifiers` fields set (were blank). |
 | P02 — Continuous Integration | Added `.github/workflows/tests.yml` — checkout, setup-python (3.9), install, pytest. No lint/coverage/matrix/cache/release. |
 | P03 — Changelog & Versioning (this task) | This document (Stage 1); `CHANGELOG.md` + version decision, pending confirmation (Stage 2). |
@@ -132,7 +132,7 @@ functionality), M021 Phase 1 (Memory Layer — real, shipped code, `core/memory.
 - **Cut a GitHub Release when, and only when, a version-number-worthy change lands** —
   i.e., not on every commit or every `P0X`/`M0X` internal milestone, but when the
   accumulated changes since the last release are enough to describe as a real version
-  bump (see semver guidance below). Given this project's actual pace (four Vector
+  bump (see semver guidance below). Given this project's actual pace (four Companion
   milestones plus two Product Readiness items in one continuous session), that could
   reasonably mean the *first* real release covers all of P01-P03 plus M01-M04 as one
   coherent "first disciplined release," rather than one release per milestone.
@@ -159,15 +159,15 @@ changed in this document — this is a recommendation for Stage 2 to confirm.**
 **Why `0.2.0`:**
 - Semver's own stated meaning for the `0.y.z` range is explicit: the public API should
   not yet be considered stable, anything may still change. That is an accurate,
-  honest description of Reader's actual current state — the `vector` CLI surface has
+  honest description of Reader's actual current state — the `companion` CLI surface has
   grown by an entire subcommand set within this session alone, and two fields
-  (`meeting_date`, `VectorObject`) are explicitly still "beyond contract," unresolved.
+  (`meeting_date`, `CompanionObject`) are explicitly still "beyond contract," unresolved.
   Declaring `1.0.0` now would assert a stability commitment this project hasn't
   actually made, on top of already-completed work, not yet tested by a real
   external consumer.
 - A **minor** bump (`0.1.0` → `0.2.0`), not a patch (`0.1.1`), because everything
   shipped since the original `0.1.0` — the entire Reader MVP pipeline, extensibility
-  architecture, Web UI, LLM layer, Memory Layer, and this session's full Vector
+  architecture, Web UI, LLM layer, Memory Layer, and this session's full Companion
   integration plus License and CI — is substantial, additive, backward-compatible new
   capability, exactly what semver's MINOR category is for. None of it removed or broke
   an existing public interface.

@@ -1,17 +1,17 @@
 """Reader M04 — Promotion Review UI (`READER_M04_DESIGN.md`).
 
 Reader MUST NOT infer new semantic objects. Reader MAY group, sort, and
-visualize contracted Vector data. Reader MUST NOT create Promotion
+visualize contracted Companion data. Reader MUST NOT create Promotion
 Candidates, Promotion Scores, Promotion Labels, or any derived workflow
-state absent from the Vector Contract (the Design Principle this module is
+state absent from the Companion Contract (the Design Principle this module is
 built against).
 
 Concretely: this groups Statements by the single, already-decided,
 already-contracted `statement_kind` field. It never reasons about
 `detected_signals` combinations to invent a candidate label — that would
-reimplement Vector's own (unpublished, analysis-only)
+reimplement Companion's own (unpublished, analysis-only)
 `M05_PROMOTION_READINESS.md` signal-combination table inside Reader, making
-Reader a second implementation of Vector's business logic. `detected_signals`
+Reader a second implementation of Companion's business logic. `detected_signals`
 is shown per-Statement (via the existing `render_statement()`) for context
 only, never used for grouping here.
 
@@ -19,16 +19,16 @@ Callers MUST pass `statements` already filtered through
 `navigation.filter_to_current_meetings(statements, meetings)`. Without it,
 this inherits the exact reindex-duplication bug M03 found and fixed for
 Object Navigation (the same real Meeting, reprocessed several times by
-Vector's own idempotent-import pipeline, would otherwise appear as several
+Companion's own idempotent-import pipeline, would otherwise appear as several
 duplicate Meeting sections here too).
 """
 
 from __future__ import annotations
 
-from ocom_reader.vector_integration.models import VectorMeeting, VectorStatement
-from ocom_reader.vector_integration.signals import render_statement
+from ocom_reader.companion_integration.models import CompanionMeeting, CompanionStatement
+from ocom_reader.companion_integration.signals import render_statement
 
-# The six closed statement_kind values, per vector-reader-contract.md /
+# The six closed statement_kind values, per companion-reader-contract.md /
 # models.KNOWN_STATEMENT_KINDS. Fixed rendering order — Task/Decision/Risk
 # first (the actual promotion-relevant kinds), then Metric, then the two
 # non-actionable kinds last.
@@ -55,15 +55,15 @@ STATEMENT_KIND_DISPLAY = {
 UNKNOWN_MEETING_LABEL = "(unknown meeting)"
 
 
-def group_by_statement_kind(statements: list[VectorStatement]) -> dict[str, list[VectorStatement]]:
+def group_by_statement_kind(statements: list[CompanionStatement]) -> dict[str, list[CompanionStatement]]:
     """Buckets by the exact, literal statement_kind value already on each
     Statement — no re-classification, no combination logic. A Statement with
     no statement_kind at all goes to UNCLASSIFIED, never merged into "other"
     (a real classifier output, not a stand-in for missing data). A
-    statement_kind value outside the six known ones (a future Vector enum
+    statement_kind value outside the six known ones (a future Companion enum
     extension) gets its own ad-hoc bucket keyed by that literal value —
     never dropped, never coerced into an existing group."""
-    grouped: dict[str, list[VectorStatement]] = {}
+    grouped: dict[str, list[CompanionStatement]] = {}
     for s in statements:
         key = s.statement_kind if s.statement_kind is not None else UNCLASSIFIED
         grouped.setdefault(key, []).append(s)
@@ -71,9 +71,9 @@ def group_by_statement_kind(statements: list[VectorStatement]) -> dict[str, list
 
 
 def _timestamp_seconds(timestamp: str) -> float:
-    """Parses Vector's zero-padded `MM:SS` Statement.timestamp into seconds
+    """Parses Companion's zero-padded `MM:SS` Statement.timestamp into seconds
     for numeric comparison. A raw string compare breaks past 99 minutes
-    ("100:00" < "99:59" lexicographically) — real Vector meetings already
+    ("100:00" < "99:59" lexicographically) — real Companion meetings already
     run past 30 minutes, so this isn't a remote hypothetical. A malformed
     value (never seen in real data, but not schema-enforced) sorts last
     within its Meeting rather than raising — this function must never crash
@@ -85,7 +85,7 @@ def _timestamp_seconds(timestamp: str) -> float:
         return float("inf")
 
 
-def _statement_sort_key(stmt: VectorStatement) -> tuple[float, str]:
+def _statement_sort_key(stmt: CompanionStatement) -> tuple[float, str]:
     """Chronological within a Meeting, tie-broken by Statement.id — so two
     Statements at the same timestamp (or both with an unparseable one) still
     render in a fixed, reproducible order across runs, not whatever order
@@ -94,8 +94,8 @@ def _statement_sort_key(stmt: VectorStatement) -> tuple[float, str]:
 
 
 def _meeting_sections(
-    statements: list[VectorStatement], meetings: list[VectorMeeting]
-) -> list[tuple[str, list[VectorStatement]]]:
+    statements: list[CompanionStatement], meetings: list[CompanionMeeting]
+) -> list[tuple[str, list[CompanionStatement]]]:
     """Partitions statements (already belonging to one statement_kind group)
     into ordered (Meeting title, ordered Statements) sections: one per
     resolved Meeting, sorted by meeting_date (undated last), tie-broken by
@@ -105,8 +105,8 @@ def _meeting_sections(
     tolerance policy as navigation.mentions()'s unresolved-reference
     handling."""
     by_id = {m.id: m for m in meetings}
-    grouped: dict[str, list[VectorStatement]] = {}
-    unresolved: list[VectorStatement] = []
+    grouped: dict[str, list[CompanionStatement]] = {}
+    unresolved: list[CompanionStatement] = []
     for s in statements:
         if s.meeting_ref in by_id:
             grouped.setdefault(s.meeting_ref, []).append(s)
@@ -127,12 +127,12 @@ def _meeting_sections(
 
 
 def render_promotion_review(
-    statements: list[VectorStatement], meetings: list[VectorMeeting]
+    statements: list[CompanionStatement], meetings: list[CompanionMeeting]
 ) -> str:
     """Reader M04 Public API — the Promotion Review block. All seven
     ALWAYS_SHOWN_GROUPS render in fixed order, even at zero count (same
     consistency discipline as render_signal_browser). Any statement_kind
-    value outside those seven (a future Vector enum extension, never seen in
+    value outside those seven (a future Companion enum extension, never seen in
     real data today) is appended afterward, sorted alphabetically, but only
     when actually present — there is no way to pre-list infinitely many
     hypothetical future values the way the seven known ones can be.

@@ -3,22 +3,22 @@ Statement to the objects it mentions, cross-meeting view, a text-only
 relationship browser, and an entity timeline.
 
 Scope note, stated once here rather than repeated on every function: none of
-this is covered by docs/contracts/vector-reader-contract.md v1.0, which is
-Statement-only. This module reads Vector's common object frontmatter
-(id/type/title/relationships/references/tags — Vector's own docs/object-model.md)
+this is covered by docs/contracts/companion-reader-contract.md v1.0, which is
+Statement-only. This module reads Companion's common object frontmatter
+(id/type/title/relationships/references/tags — Companion's own docs/object-model.md)
 and, for the timeline specifically, Meeting.meeting_date (see
-models.VectorMeeting's docstring for why that one field is a deliberate,
+models.CompanionMeeting's docstring for why that one field is a deliberate,
 flagged exception). See READER_M03.md for the explicit recommendation that
-Vector formally publish a second contract (or extend the existing one) to
+Companion formally publish a second contract (or extend the existing one) to
 cover this.
 
 Everything here is read-only. It also inherits M01's key limitation
-honestly, not silently: Vector's real data has zero populated `relationships`
+honestly, not silently: Companion's real data has zero populated `relationships`
 and zero `alias:` tags on any of its 6 real objects today (verified directly,
 not assumed) — Object View's Aliases/Relationships sections and the
-Relationship Browser are exercised in tests_vector_integration.py against
+Relationship Browser are exercised in tests_companion_integration.py against
 synthetic fixtures for that reason, alongside real-data tests for the parts
-(Linked Statements, Mentions, Cross-Meeting View, Timeline) that Vector's
+(Linked Statements, Mentions, Cross-Meeting View, Timeline) that Companion's
 real `references` data already supports.
 """
 
@@ -26,22 +26,22 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ocom_reader.vector_integration.loader import find_current_meetings
-from ocom_reader.vector_integration.models import VectorMeeting, VectorObject, VectorStatement
+from ocom_reader.companion_integration.loader import find_current_meetings
+from ocom_reader.companion_integration.models import CompanionMeeting, CompanionObject, CompanionStatement
 
 
 def filter_to_current_meetings(
-    statements: list[VectorStatement], meetings: list[VectorMeeting]
-) -> list[VectorStatement]:
+    statements: list[CompanionStatement], meetings: list[CompanionMeeting]
+) -> list[CompanionStatement]:
     """Drop Statements belonging to a superseded reindex run of the same
-    real-world meeting. Discovered necessary by actually running `vector
-    object`/`mentioned-in`/`timeline` against Vector's real repository root
+    real-world meeting. Discovered necessary by actually running `companion
+    object`/`mentioned-in`/`timeline` against Companion's real repository root
     (which contains ~6 reprocessing runs of the same meeting across
     M03-M07, same source_hash, different parser_version): without this, a
     single real meeting a Partner was mentioned in shows up as 6 separate
     "meetings" with the same title, and Linked Statements over-counts by the
     same factor. Reuses loader.find_current_meetings — the identical
-    supersedes-chain resolution Vector's own pipeline already relies on for
+    supersedes-chain resolution Companion's own pipeline already relies on for
     idempotent import — rather than inventing a second notion of "current"
     here. Object Navigation callers (Object View, Cross-Meeting View, Entity
     Timeline) should filter through this before aggregating across meetings;
@@ -52,13 +52,13 @@ def filter_to_current_meetings(
     return [s for s in statements if s.meeting_ref in current_ids]
 
 
-def find_object(objects: list[VectorObject], object_id: str) -> Optional[VectorObject]:
+def find_object(objects: list[CompanionObject], object_id: str) -> Optional[CompanionObject]:
     return next((o for o in objects if o.id == object_id), None)
 
 
-def linked_statements(object_id: str, statements: list[VectorStatement]) -> list[VectorStatement]:
+def linked_statements(object_id: str, statements: list[CompanionStatement]) -> list[CompanionStatement]:
     """Statements whose `references` include this object id — the same
-    `references` field M01 already models on VectorStatement, just read from
+    `references` field M01 already models on CompanionStatement, just read from
     the other direction (object -> mentioning Statements, not Statement ->
     referenced objects)."""
     return [
@@ -67,7 +67,7 @@ def linked_statements(object_id: str, statements: list[VectorStatement]) -> list
     ]
 
 
-def linked_meeting_ids(statements: list[VectorStatement]) -> list[str]:
+def linked_meeting_ids(statements: list[CompanionStatement]) -> list[str]:
     """Distinct Meeting ids referenced by these Statements, in first-seen
     order (not sorted — callers needing chronological order should use
     render_entity_timeline, which resolves real dates). `seen` is a set for
@@ -89,7 +89,7 @@ def linked_meeting_ids(statements: list[VectorStatement]) -> list[str]:
 
 
 def render_object_view(
-    obj: VectorObject, statements: list[VectorStatement], objects: list[VectorObject]
+    obj: CompanionObject, statements: list[CompanionStatement], objects: list[CompanionObject]
 ) -> str:
     """M03 Task 1 — the Object View block. `objects` (Reader M05 — Evidence view)
     is every loaded object from the same root, used only to resolve `obj.evidence`
@@ -126,7 +126,7 @@ def render_object_view(
     return "\n".join(lines)
 
 
-def mentions(stmt: VectorStatement, objects: list[VectorObject]) -> list[VectorObject]:
+def mentions(stmt: CompanionStatement, objects: list[CompanionObject]) -> list[CompanionObject]:
     """M03 Task 2 (Reverse Navigation) — the objects this Statement's
     `references` resolve to, in the order they appear in `references`.
     A `references` entry whose target isn't found among `objects` (either
@@ -142,7 +142,7 @@ def mentions(stmt: VectorStatement, objects: list[VectorObject]) -> list[VectorO
     return found
 
 
-def render_mentions(stmt: VectorStatement, objects: list[VectorObject]) -> str:
+def render_mentions(stmt: CompanionStatement, objects: list[CompanionObject]) -> str:
     found = mentions(stmt, objects)
     lines = ["Mentions", ""]
     lines.extend(f"✓ {o.title}" for o in found) if found else lines.append("(none)")
@@ -150,8 +150,8 @@ def render_mentions(stmt: VectorStatement, objects: list[VectorObject]) -> str:
 
 
 def meetings_mentioning(
-    obj: VectorObject, statements: list[VectorStatement], meetings: list[VectorMeeting]
-) -> list[VectorMeeting]:
+    obj: CompanionObject, statements: list[CompanionStatement], meetings: list[CompanionMeeting]
+) -> list[CompanionMeeting]:
     """M03 Task 3 (Cross-Meeting View) — every Meeting whose Statements
     mention this object, resolved from ids to the actual Meeting objects."""
     by_id = {m.id: m for m in meetings}
@@ -160,7 +160,7 @@ def meetings_mentioning(
 
 
 def render_cross_meeting_view(
-    obj: VectorObject, statements: list[VectorStatement], meetings: list[VectorMeeting]
+    obj: CompanionObject, statements: list[CompanionStatement], meetings: list[CompanionMeeting]
 ) -> str:
     found = meetings_mentioning(obj, statements, meetings)
     lines = [obj.title, "", "mentioned in", ""]
@@ -169,13 +169,13 @@ def render_cross_meeting_view(
 
 
 def render_relationship_tree(
-    start: VectorObject, objects: list[VectorObject], max_depth: int = 6
+    start: CompanionObject, objects: list[CompanionObject], max_depth: int = 6
 ) -> str:
     """M03 Task 4 (Relationship Browser) — a plain text tree, no graphical
     visualization, walking `relationships[].target` from `start`. Generic:
-    does not hardcode any relationship type name (Vector's own vocabulary is
+    does not hardcode any relationship type name (Companion's own vocabulary is
     open-ended per docs/relationships-and-references.md — "works_with" in
-    the milestone's own example isn't in Vector's documented starter list,
+    the milestone's own example isn't in Companion's documented starter list,
     and this function doesn't need it to be). Cycle-safe: a relationship
     loop (A -> B -> A) stops the walk rather than recursing forever, and
     `max_depth` is a second, independent safety bound."""
@@ -183,7 +183,7 @@ def render_relationship_tree(
     lines: list[str] = []
     visited: set[str] = set()
 
-    def walk(obj: VectorObject, depth: int) -> None:
+    def walk(obj: CompanionObject, depth: int) -> None:
         lines.append(obj.type.capitalize())
         if obj.id in visited or depth >= max_depth:
             return
@@ -206,16 +206,16 @@ def render_relationship_tree(
 
 
 def render_entity_timeline(
-    obj: VectorObject, statements: list[VectorStatement], meetings: list[VectorMeeting]
+    obj: CompanionObject, statements: list[CompanionStatement], meetings: list[CompanionMeeting]
 ) -> str:
     """M03 Task 5 (Entity Timeline) — mentions grouped by Meeting, sorted by
-    Meeting.meeting_date (see models.VectorMeeting's docstring: part of
+    Meeting.meeting_date (see models.CompanionMeeting's docstring: part of
     Contract v1.1's "Meeting" section, originally read ahead of any contract
-    covering it, formalized once Vector published the addendum).
+    covering it, formalized once Companion published the addendum).
 
     This is a timeline of MENTIONS, not of field-level CHANGES to the object
     itself — Reader reads a single current snapshot of each object file, not
-    Vector's git history, so it has no way to know what an object's fields
+    Companion's git history, so it has no way to know what an object's fields
     looked like at an earlier point in time. Conflating "mentioned in a
     meeting on this date" with "the object's data changed on this date"
     would overstate what Reader can actually see; this function only claims

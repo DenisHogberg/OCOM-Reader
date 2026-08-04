@@ -1,10 +1,10 @@
-"""Loads Vector Statement/Meeting objects from a Vector repository directory
+"""Loads Companion Statement/Meeting objects from a Companion repository directory
 (works against both `objects/` — production — and `ai/staging/<meeting-id>/` —
 staged candidates; Reader treats them identically, since the contract makes no
 distinction between the two for reading purposes).
 
-Read-only. Never writes back into a Vector repository — Reader has no role in
-Vector's write-back governance (Vector's own docs/ai-collaboration.md).
+Read-only. Never writes back into a Companion repository — Reader has no role in
+Companion's write-back governance (Companion's own docs/ai-collaboration.md).
 """
 
 from __future__ import annotations
@@ -16,11 +16,11 @@ from typing import Optional
 import yaml
 from pydantic import ValidationError
 
-from ocom_reader.vector_integration.models import (
+from ocom_reader.companion_integration.models import (
     KNOWN_OBJECT_TYPES,
-    VectorMeeting,
-    VectorObject,
-    VectorStatement,
+    CompanionMeeting,
+    CompanionObject,
+    CompanionStatement,
 )
 
 _NON_OBJECT_FILENAMES = {"README.md", "REVIEW.md"}
@@ -29,11 +29,11 @@ _FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 
 
 def parse_frontmatter(path: Path) -> Optional[dict]:
-    """Split a Vector object's YAML frontmatter out of its Markdown body.
+    """Split a Companion object's YAML frontmatter out of its Markdown body.
     Returns None (not an error) for any file that isn't frontmatter-shaped —
-    Reader must tolerate non-Vector Markdown files sitting alongside real
-    Vector objects (README.md, REVIEW.md are never Vector objects themselves,
-    per Vector's own repository-rules.md naming convention)."""
+    Reader must tolerate non-Companion Markdown files sitting alongside real
+    Companion objects (README.md, REVIEW.md are never Companion objects themselves,
+    per Companion's own repository-rules.md naming convention)."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -48,7 +48,7 @@ def parse_frontmatter(path: Path) -> Optional[dict]:
     return data if isinstance(data, dict) else None
 
 
-def load_statements(root: Path) -> list[VectorStatement]:
+def load_statements(root: Path) -> list[CompanionStatement]:
     """Every valid Statement found anywhere under `root` (recursive — works
     against objects/statements/ and ai/staging/<meeting-id>/ alike). Silently
     skips anything that isn't a Statement or fails validation against the
@@ -60,13 +60,13 @@ def load_statements(root: Path) -> list[VectorStatement]:
         if not data or data.get("type") != "statement":
             continue
         try:
-            statements.append(VectorStatement.model_validate(data))
+            statements.append(CompanionStatement.model_validate(data))
         except ValidationError:
             continue
     return statements
 
 
-def load_meetings(root: Path) -> list[VectorMeeting]:
+def load_meetings(root: Path) -> list[CompanionMeeting]:
     """Every valid Meeting found anywhere under `root`. Same tolerance policy
     as load_statements()."""
     meetings = []
@@ -75,13 +75,13 @@ def load_meetings(root: Path) -> list[VectorMeeting]:
         if not data or data.get("type") != "meeting":
             continue
         try:
-            meetings.append(VectorMeeting.model_validate(data))
+            meetings.append(CompanionMeeting.model_validate(data))
         except ValidationError:
             continue
     return meetings
 
 
-def load_objects(root: Path) -> list[VectorObject]:
+def load_objects(root: Path) -> list[CompanionObject]:
     """Every valid non-Statement/Meeting object found anywhere under `root`
     (Partner, Company, Employee, Task, Decision, Risk, Issue, Document,
     Project, Product, Evidence) — Reader M03's Object Navigation.
@@ -101,14 +101,14 @@ def load_objects(root: Path) -> list[VectorObject]:
         if not data or data.get("type") not in KNOWN_OBJECT_TYPES:
             continue
         try:
-            objects.append(VectorObject.model_validate(data))
+            objects.append(CompanionObject.model_validate(data))
         except ValidationError:
             continue
     return objects
 
 
-def find_current_meetings(meetings: list[VectorMeeting]) -> list[VectorMeeting]:
-    """Meetings not superseded by any other — the same algorithm Vector's own
+def find_current_meetings(meetings: list[CompanionMeeting]) -> list[CompanionMeeting]:
+    """Meetings not superseded by any other — the same algorithm Companion's own
     M03 pipeline uses to find the head of a source's reprocessing chain
     (ingest_transcript.find_existing_import), independently reimplemented here
     on Reader's side of the contract, read-only, from the same `supersedes`

@@ -18,8 +18,8 @@ constraint, which this module does not relax.
 
 from __future__ import annotations
 
-from ocom_reader.vector_integration.models import VectorStatement
-from ocom_reader.vector_integration.signals import filter_by_signal
+from ocom_reader.companion_integration.models import CompanionStatement
+from ocom_reader.companion_integration.signals import filter_by_signal
 
 KNOWN_FILTER_KEYS = frozenset({"signal", "speaker", "meeting"})
 
@@ -46,7 +46,7 @@ def parse_query(query: str) -> dict[str, str]:
     return filters
 
 
-def apply_filters(statements: list[VectorStatement], filters: dict[str, str]) -> list[VectorStatement]:
+def apply_filters(statements: list[CompanionStatement], filters: dict[str, str]) -> list[CompanionStatement]:
     """Apply every filter in `filters`, ANDed together — each filter narrows
     the previous result, in a fixed, deterministic order (signal, then
     speaker, then meeting) so results are reproducible regardless of the
@@ -63,7 +63,7 @@ def apply_filters(statements: list[VectorStatement], filters: dict[str, str]) ->
     return result
 
 
-def search(statements: list[VectorStatement], query: str) -> list[VectorStatement]:
+def search(statements: list[CompanionStatement], query: str) -> list[CompanionStatement]:
     """Parse and apply a query string in one step — the function CLI's
-    `vector search` calls."""
+    `companion search` calls."""
     return apply_filters(statements, parse_query(query))

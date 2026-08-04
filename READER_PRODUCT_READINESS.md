@@ -13,10 +13,10 @@ was checked against the actual repository (`git log`, `git tag`, `pip show`, a l
 - **Milestones implemented**: the Adapter/Normalizer core (Phases 1-5), the Reader MVP
   pipeline (M006-M010), extensibility architecture (M011-M017), a Web UI (M018), an
   optional LLM presentation layer (M019), early OCOM Expert design work (M020), a Memory
-  Layer (M021 Phase 1), and the Vector integration (Reader M01-M04: Contract Compliance,
+  Layer (M021 Phase 1), and the Companion integration (Reader M01-M04: Contract Compliance,
   Signal Explorer, Object Navigation, Promotion Review).
 - **CLI commands**: `ask`, `search`, `related`, `explain`, `repo` (4 sub-commands),
-  `plugin` (5 sub-commands), `web`, `completion`, and `vector` (10 sub-commands) — 24
+  `plugin` (5 sub-commands), `web`, `completion`, and `companion` (10 sub-commands) — 24
   total entry points under one `ocom-reader` executable.
 - **Test coverage**: **512 tests, all passing** (`pytest tests/ -q`, just run), spanning
   36 test files. No coverage percentage is measured or enforced (no `pytest-cov`
@@ -40,7 +40,7 @@ was checked against the actual repository (`git log`, `git tag`, `pip show`, a l
 
 | Item | Status | Evidence |
 |---|---|---|
-| **README** | Needs Improvement | Exists, substantial (258 lines), has real install/run/test instructions — but organized as an internal engineering narrative (Phase 1-5, per-milestone implementation notes) rather than a product-facing entry point; contains a broken/out-of-repo relative link (`../Meta/Object.md.docx` resolves outside this repository entirely); zero mentions of the Vector integration, `vector` CLI, or `READER_STATUS.md` anywhere. |
+| **README** | Needs Improvement | Exists, substantial (258 lines), has real install/run/test instructions — but organized as an internal engineering narrative (Phase 1-5, per-milestone implementation notes) rather than a product-facing entry point; contains a broken/out-of-repo relative link (`../Meta/Object.md.docx` resolves outside this repository entirely); zero mentions of the Companion integration, `companion` CLI, or `READER_STATUS.md` anywhere. |
 | **LICENSE** | **Missing** | `find . -maxdepth 1 -iname "LICENSE*"` → no results. `pip show ocom-reader` confirms: `License:` (blank). No file in this repository currently grants anyone the legal right to use, modify, or redistribute it. |
 | **CHANGELOG** | **Missing** | No `CHANGELOG.md` anywhere. The only change history is git log + scattered `READER_*.md`/`MILESTONE-*.md` reports — real records, but not a single chronological, user-facing account of what changed release-to-release. |
 | **CONTRIBUTING** | **Missing** | No `CONTRIBUTING.md`. No documented contribution process, coding standards pointer, or PR expectations for an external contributor. |
@@ -48,14 +48,14 @@ was checked against the actual repository (`git log`, `git tag`, `pip show`, a l
 | **Issue Templates** | **Missing** | Same root cause — no `.github/` directory means no `ISSUE_TEMPLATE/` either. |
 | **Pull Request Template** | **Missing** | Same root cause. |
 | **Release process** | **Needs Improvement** | Two tags exist (`v0.1.0`, `v1.0.0`), so *some* tagging habit exists — but it stopped 12 substantial commits ago, was never connected to `pyproject.toml`'s version field even when active, and there is no documented process (script, workflow, or written steps) for cutting the next one. |
-| **Versioning** | **Needs Improvement** | `pyproject.toml` uses semver-shaped syntax correctly, but the value has been static since the file's first commit despite four completed, tested Vector-integration milestones alone (plus everything else since `v1.0.0`). Present as a mechanism, not maintained as a signal. |
+| **Versioning** | **Needs Improvement** | `pyproject.toml` uses semver-shaped syntax correctly, but the value has been static since the file's first commit despite four completed, tested Companion-integration milestones alone (plus everything else since `v1.0.0`). Present as a mechanism, not maintained as a signal. |
 | **Packaging** | **Needs Improvement** | `pyproject.toml` is real and functional — `hatchling` build backend, `[project.scripts]` entry point, `pip install -e .` works (verified: `pip show ocom-reader` succeeds). But `authors`, `license`, `classifiers`, and `urls` are all absent — a PyPI upload today would ship with a blank author, blank license field, and no homepage/repository link. |
 | **Installation** | Needs Improvement | `pip install -e .` is documented and works — but appears three times in the README (`Reader MVP`, `Running`, `Testing` sections) with slightly different framing each time, none of them under a header a newcomer scanning for "installation" would reliably find first. |
 | **Quick Start** | **Missing** | No section titled `Quick Start` or equivalent exists. The closest equivalent (`## Reader MVP`) is preceded by ~40 lines of architectural framing (`OCOMObject`, `Evidence`, ADR references) before the first runnable command appears. |
 
 **Present, unambiguously, with no caveat**: `.gitignore` (covers the real cases: venv,
 caches, build artifacts, `.ocom/`); the test suite itself (512 passing, real, exercised
-against live Vector data where applicable); `pyproject.toml`'s basic mechanics
+against live Companion data where applicable); `pyproject.toml`'s basic mechanics
 (build-system, dependencies, entry point) all functioning.
 
 ## 3. Repository Entry Experience
@@ -68,24 +68,24 @@ knows this project's history:
   saying what it is, and the very next paragraph introduces `RawDocument`, `ADR-007`,
   and "Operational Memory Platform" — internal architectural vocabulary, not a
   plain-language answer to "what is this and why would I use it."
-- **Is it clear how Reader differs from Vector?** No — the distinction doesn't exist in
-  this document at all. `README.md` contains zero occurrences of "Vector." Someone who
-  has heard of Vector (a separate, real, sibling project) and lands on this repository
-  has no way to learn from the README that Reader *reads* Vector's data, doesn't
+- **Is it clear how Reader differs from Companion?** No — the distinction doesn't exist in
+  this document at all. `README.md` contains zero occurrences of "Companion." Someone who
+  has heard of Companion (a separate, real, sibling project) and lands on this repository
+  has no way to learn from the README that Reader *reads* Companion's data, doesn't
   produce it, and is a completely separate codebase. This gap is total, not partial.
 - **Is it clear how to get started?** Mostly, once you reach it — `pip install -e .`
   followed by a runnable `ocom-reader ask "..."` does appear, and it works (verified).
   But it's reached only after architectural framing that a newcomer evaluating "should I
   use this" would have to read through first, and it's the Reader MVP's start command
-  only — there is no equivalent quick-start for the Vector integration's 10 commands
+  only — there is no equivalent quick-start for the Companion integration's 10 commands
   anywhere in the README.
-- **Is it clear what capabilities already exist?** No, for the Vector integration
+- **Is it clear what capabilities already exist?** No, for the Companion integration
   specifically. `READER_STATUS.md` is a genuinely good answer to this question — but
   the README never points to it, so a reader has to already know that file exists.
 
 **Concrete improvements this points to** (not designed here, just identified):
 a short "What this is / what it isn't" lead paragraph in plain language; an explicit
-"Reader vs. Vector" callout early, linking to `docs/vector-integration.md` and
+"Reader vs. Companion" callout early, linking to `docs/companion-integration.md` and
 `READER_STATUS.md`; a `## Quick Start` section as close to the top as the license
 badge, before any architectural history; fixing or removing the out-of-repo
 `../Meta/...` links; moving the Phase 1-5 narrative and per-milestone implementation
@@ -109,7 +109,7 @@ one pass)**
 
 **Phase B — Entry Experience**
 - README redesign per Section 3's findings: lead with plain-language "what/why,"
-  explicit Reader-vs-Vector distinction, a real `## Quick Start`, fixed/removed
+  explicit Reader-vs-Companion distinction, a real `## Quick Start`, fixed/removed
   out-of-repo links, historical narrative moved out of the critical path.
 - `CONTRIBUTING.md`.
 - `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`.
@@ -130,7 +130,7 @@ one pass)**
 | Minimal CI (`pytest` on push) | High — protects the 512 already-passing tests from silent regression, cheap insurance | Low (one workflow file) | None — codifies a currently-true state, can't "discover" new failures that don't already exist | **2** |
 | Resolve version inconsistency (`pyproject.toml` + tag) | High — currently the repo's own metadata contradicts itself | Low (edit one line) once the number is decided | Low — the only risk is picking the wrong number, which is a decision, not an execution risk | **3** |
 | `CHANGELOG.md` | Medium-High — makes four (really more) real milestones legible to anyone who wasn't in this conversation | Medium (compiling from existing reports/log, not new investigation) | None | **4** |
-| README redesign (Quick Start, Reader-vs-Vector, fix broken links) | High — this is the actual first thing every future user or contributor sees | Medium — a rewrite, not a patch, to do properly | Low — content-only, no functional risk, but easy to under-scope if rushed | **5** |
+| README redesign (Quick Start, Reader-vs-Companion, fix broken links) | High — this is the actual first thing every future user or contributor sees | Medium — a rewrite, not a patch, to do properly | Low — content-only, no functional risk, but easy to under-scope if rushed | **5** |
 | `CONTRIBUTING.md` | Medium — mostly matters once external contributors actually show up | Low | None | **6** |
 | Issue/PR templates | Low-Medium — nice for a public repo, not urgent pre-launch | Low | None | **7** |
 | `pyproject.toml` metadata (authors/classifiers/urls) | Medium — only matters at the moment of actual PyPI publish | Low | None | **8** |
